@@ -9,6 +9,8 @@ ALLSUBDIRS = ${SUBDIRS} A3
 .PHONY: all clean subdirs cleansubdirs atomeyelib
 
 subdirs:
+	ln -sf ${QUIP_ROOT}/libAtoms/xyz_netcdf.c Atoms/xyz_netcdf.c
+	ln -sf ${QUIP_ROOT}/libAtoms/xyz_netcdf.h Atoms/xyz_netcdf.h
 	for dir in ${SUBDIRS}; do \
 	  cp $$dir/*.h include; \
 	  $(MAKE) -C $$dir || exit 1; \
@@ -23,7 +25,10 @@ cleansubdirs:
 all: subdirs
 
 atomeyelib:
+	ln -sf ${QUIP_ROOT}/libAtoms/xyz_netcdf.c Atoms/xyz_netcdf.c
+	ln -sf ${QUIP_ROOT}/libAtoms/xyz_netcdf.h Atoms/xyz_netcdf.h
 	for dir in ${SUBDIRS}; do \
+	  cp $$dir/*.h include; \
 	  $(MAKE) -C $$dir ATOMEYE_LIB=-DATOMEYE_LIB || exit 1; \
 	done
 	$(MAKE) -C A3 ATOMEYE_LIB=-DATOMEYE_LIB libAtomEye.a || exit 1
