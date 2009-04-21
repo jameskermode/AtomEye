@@ -121,22 +121,6 @@ g:
 	`echo "${MAKECMDGOALS}" | sed -e 's/^g //' | sed -e 's/^g$///' `; \
 	exit 99
 
-%_TEST: $(SRCS) ${HEADER}
-	for obj in $(OBJS); do \
-	 base=`echo $$obj | sed -e 's/\.o$$//g'`; \
-	 grep _$@ $$base.c > /dev/null; \
-	 if [ $$? = "0" ]; then \
-	  ${CC} -D_$@ ${CFLAGS} -c $$base.c -o "$$base"_$@".o"; \
-	  if [ $$? = "0" ]; then \
-	   objs="$$base"_$@".o $$objs"; else exit 99; fi; \
-	 else \
-	  gmake --no-print-directory $$base.o > /dev/null; \
-	  objs="$$objs $$base.o"; \
-	 fi; \
-	done; \
-	${LD} ${CFLAGS} $$objs -o $@${EXESUFFIX} ${LDFLAGS}; \
-	chmod u+x $@${EXESUFFIX}
-
 #	Selective test of certain function, say "gmake Frandexp"
 %:	%.f
 %:	%.c

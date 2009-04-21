@@ -146,22 +146,6 @@ ${PROGS}:${SRCS} ${HEADER}  ${ADD_DEPENDENCE}
 	chmod u+x ${MY_BIN_DIR}/$@${EXESUFFIX}; \
 	ls -l ${MY_BIN_DIR}/$@${EXESUFFIX} | sed -e 's/   */  /g'
 
-%_TEST: $(SRCS) ${HEADER}
-	for obj in $(OBJS); do \
-	 base=`echo $$obj | sed -e 's/\.o$$//g'`; \
-	 grep _$@ $$base.c > /dev/null; \
-	 if [ $$? = "0" ]; then \
-	  ${CC} -D_$@ ${CFLAGS} -c $$base.c -o "$$base"_$@".o"; \
-	  if [ $$? = "0" ]; then \
-	   objs="$$base"_$@".o $$objs"; else exit 99; fi; \
-	 else \
-	  $(MAKE) --no-print-directory $$base.o > /dev/null; \
-	  objs="$$objs $$base.o"; \
-	 fi; \
-	done; \
-	${LD} ${CFLAGS} $$objs -o $@${EXESUFFIX} ${LDFLAGS}; \
-	chmod u+x $@${EXESUFFIX}
-
 #	Selective test of certain function, say "gmake Mprint"
 %:	%.f
 %:	%.c
