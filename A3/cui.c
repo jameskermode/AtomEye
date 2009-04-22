@@ -1867,10 +1867,11 @@ static bool proc_aux_property_coloring(int iw, char *instr, char **outstr)
     int i, number;
 
     // Allow aux props to be looked up by name as well as by number
+    // make this search case insensitive
     if (sscanf(instr, "%d", &number) != 1) {
       number = -1;
       for (i=0; i < CONFIG_num_auxiliary; i++) {
-	if (strcmp(CONFIG_auxiliary_name[i], instr) == 0) {
+	if (strcasecmp(CONFIG_auxiliary_name[i], instr) == 0) {
 	  number = i;
 	  break;
 	}
