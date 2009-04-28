@@ -26,6 +26,8 @@ endif
 ifdef INC_PATH
  MY_INC_DIR = $(INC_PATH)
 else
+all: install
+
  MY_INC_DIR = $(HOME)/Co/Include
 endif
 ifdef LIB_PATH
@@ -97,8 +99,6 @@ CFLAGS = -D_$(SYS) ${CCFLAGS} -I${MY_INC_DIR}
 LDFLAGS = ${SYSTEM_LIB_FLAG} ${USE_SYSTEM_LIB} -L${MY_LIB_DIR} ${USE_MY_LIB}
 
 .PHONY: all  i install  c clean  b backup  r  g  p  a access
-
-all:	install
 
 %.o:	%.c ${HEADER}  ${ADD_DEPENDENCE}
 	${CC} ${CFLAGS} -c $< -o $@

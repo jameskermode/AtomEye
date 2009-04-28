@@ -21,6 +21,8 @@ SHELL = sh
 GDBTMP = /tmp/${PROG}.gdb
 #EXESUFFIX =
 
+all: install
+
 include Makefile.inc
 include Makefile.common
 ifeq (${QUIP_ARCH},)
@@ -46,8 +48,7 @@ LDFLAGS += -L${MY_LIB_DIR} ${USE_MY_LIB} ${SYSTEM_LIB_FLAG} ${USE_SYSTEM_LIB}
 
 .PHONY: all  i install  c clean  b backup  t test  g  r relink  a access
 
-all:	i t
-# all:	t #
+
 
 %.o:	%.c
 	${CC} ${CFLAGS} -c $< -o $@

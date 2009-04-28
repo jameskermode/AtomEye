@@ -14,6 +14,8 @@ SRCS = $(addsuffix .c, $(basename ${OBJS}))
 GDBTMP = /tmp/${LIB}.gdb
 EXESUFFIX =
 
+all: install
+
 include Makefile.inc
 include Makefile.common
 ifeq (${QUIP_ARCH},)
@@ -36,8 +38,6 @@ CFLAGS += -D_$(SYS) ${CCFLAGS} -I${MY_INC_DIR}
 LDFLAGS = ${SYSTEM_LIB_FLAG} ${USE_SYSTEM_LIB} -L${MY_LIB_DIR} ${USE_MY_LIB}
 
 .PHONY: all  i install  c clean  b backup  r  g  h  a access
-
-all:	install
 
 %.o:	%.c ${HEADER}  Makefile
 	${CC} ${CFLAGS} -c $< -o $@
