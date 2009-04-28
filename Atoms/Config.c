@@ -3732,15 +3732,15 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
 	//printf("%s[%d,%d] type %d\n", atoms->property_name[i], n, j, atoms->property_type[i]);
 	switch (atoms->property_type[i]) {
 	case(PROPERTY_INT):
-	  *(CONFIG_auxiliary[naux]+n) = (double)property_int(atoms, i, j, n);
+	  *(CONFIG_auxiliary[naux+j]+n) = (double)property_int(atoms, i, j, n);
 	  break;
 	
 	case(PROPERTY_REAL):
-	  *(CONFIG_auxiliary[naux]+n) = property_real(atoms, i, j, n);
+	  *(CONFIG_auxiliary[naux+j]+n) = property_real(atoms, i, j, n);
 	  break;
 
 	case(PROPERTY_LOGICAL):
-	  *(CONFIG_auxiliary[naux]+n) = (double)property_logical(atoms, i, j, n);
+	  *(CONFIG_auxiliary[naux+j]+n) = (double)property_logical(atoms, i, j, n);
 	  break;
 
 	case(PROPERTY_STR):

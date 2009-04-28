@@ -576,6 +576,8 @@ void Config_load (char *fname, FILE *info, Alib_Declare_Config);
 #define Config_LOAD(fname,Config_Alib_to_Alib) \
   Config_load(fname,stdout,Config_Alib_to_Alib)
 
+void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config);
+
 #define CONFIG_PDB_LOADED  0
 #define CONFIG_CFG_LOADED  1
 /* Try to guess file format from filename suffix and   */
