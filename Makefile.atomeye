@@ -31,6 +31,6 @@ atomeyelib:
 	  cp $$dir/*.h include; \
 	  $(MAKE) -C $$dir ATOMEYE_LIB=-DATOMEYE_LIB || exit 1; \
 	done
-	$(MAKE) -C A3 ATOMEYE_LIB=-DATOMEYE_LIB libAtomEye.a || exit 1
+	$(MAKE) -C A3 ATOMEYE_LIB=-DATOMEYE_LIB atomeyelib || exit 1
 
 clean: cleansubdirs

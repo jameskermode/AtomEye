@@ -22,6 +22,7 @@ GDBTMP = /tmp/${PROG}.gdb
 #EXESUFFIX =
 
 all: install
+atomeyelib: ${STATIC_LIB_FILE}
 
 include Makefile.inc
 include Makefile.common
