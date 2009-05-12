@@ -3403,6 +3403,7 @@ void Config_load_xyz (char *fname, FILE *info, Alib_Declare_Config)
       mass_aux_index = entry_count;
 
     if (ncols == 1) {
+      fprintf(stderr, "entry_count = %d\n", entry_count);
       if (entry_count == CONFIG_MAX_AUXILIARY) {
 	fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
 		CONFIG_MAX_AUXILIARY);
@@ -3414,6 +3415,7 @@ void Config_load_xyz (char *fname, FILE *info, Alib_Declare_Config)
     }
     else
       for (j=0; j<ncols; j++) {
+	fprintf(stderr, "entry_count = %d\n", entry_count);
 	if (entry_count == CONFIG_MAX_AUXILIARY) {
 	  fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
 		  CONFIG_MAX_AUXILIARY);
@@ -3669,6 +3671,11 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
   pos_idx = atoms_find_property(atoms, "pos");
   if (pos_idx == -1) pe("No pos in atoms");
 
+  // swap species and pos to beginning to ensure they're not excluded
+  // if we have a lot of aux props
+  atoms_swap_properties(atoms, species_idx, 0);  species_idx = 0;
+  atoms_swap_properties(atoms, pos_idx, 1);      pos_idx = 1;
+
   // Process rest of aux props
   entry_count = 0;
   for (i=0; i < atoms->n_property; i++) {
@@ -3685,16 +3692,31 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
       mass_aux_index = entry_count;
 
     if (atoms->property_ncols[i] == 1) {
+      if (entry_count == CONFIG_MAX_AUXILIARY) {
+	fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
+		CONFIG_MAX_AUXILIARY);
+	entry_count = CONFIG_MAX_AUXILIARY;
+	goto LA_AUX_PROPS_DONE;
+      }
+      printf("CONFIG_auxiliary_name[%d] = %s\n", entry_count, atoms->property_name[i]);
       strcpy(CONFIG_auxiliary_name[entry_count], atoms->property_name[i]);
       entry_count++;
     }
     else
       for (j=0; j<atoms->property_ncols[i]; j++) {
+	if (entry_count == CONFIG_MAX_AUXILIARY) {
+	  fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
+		  CONFIG_MAX_AUXILIARY);
+	  entry_count = CONFIG_MAX_AUXILIARY;
+	  goto LA_AUX_PROPS_DONE;
+	}
+	printf("CONFIG_auxiliary_name[%d] = %s %d\n", entry_count, atoms->property_name[i], j);
 	sprintf(CONFIG_auxiliary_name[entry_count], "%s%d", atoms->property_name[i], j);
 	entry_count++;
       }
   }
 
+ LA_AUX_PROPS_DONE:
   entry_count += 4;  // For symbol and positions
   Fprintf(info, "Config_load_libatoms: entry_count = %d\n", entry_count);
 
@@ -3729,6 +3751,7 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
       if (i == species_idx || i == pos_idx) continue;
 
       for (j=0; j < atoms->property_ncols[i]; j++) {
+	if (naux+j >= CONFIG_MAX_AUXILIARY) goto AUX_PROP_COPY_ABORT;
 	//printf("%s[%d,%d] type %d\n", atoms->property_name[i], n, j, atoms->property_type[i]);
 	switch (atoms->property_type[i]) {
 	case(PROPERTY_INT):
@@ -3749,7 +3772,10 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
       }
       naux += atoms->property_ncols[i];
     }
+  AUX_PROP_COPY_ABORT:
+    ;
   }
+
 
   // Set the mass, either from symbol or from mass aux prop if there is one
   if (mass_aux_index == -1) {
