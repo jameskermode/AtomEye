@@ -3693,24 +3693,22 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
 
     if (atoms->property_ncols[i] == 1) {
       if (entry_count == CONFIG_MAX_AUXILIARY) {
-	fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
+	Fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
 		CONFIG_MAX_AUXILIARY);
 	entry_count = CONFIG_MAX_AUXILIARY;
 	goto LA_AUX_PROPS_DONE;
       }
-      printf("CONFIG_auxiliary_name[%d] = %s\n", entry_count, atoms->property_name[i]);
       strcpy(CONFIG_auxiliary_name[entry_count], atoms->property_name[i]);
       entry_count++;
     }
     else
       for (j=0; j<atoms->property_ncols[i]; j++) {
 	if (entry_count == CONFIG_MAX_AUXILIARY) {
-	  fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
+	  Fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
 		  CONFIG_MAX_AUXILIARY);
 	  entry_count = CONFIG_MAX_AUXILIARY;
 	  goto LA_AUX_PROPS_DONE;
 	}
-	printf("CONFIG_auxiliary_name[%d] = %s %d\n", entry_count, atoms->property_name[i], j);
 	sprintf(CONFIG_auxiliary_name[entry_count], "%s%d", atoms->property_name[i], j);
 	entry_count++;
       }
