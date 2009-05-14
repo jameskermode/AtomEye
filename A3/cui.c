@@ -4967,7 +4967,11 @@ int atomeyelib_redraw(int iw) {
   expose.count = 0;
 
   proc_redraw(iw, NULL, NULL);
-  return XSendEvent(AX_display[iw], AX_win[iw], FALSE, 0, (XEvent *) &expose);
+
+  if (AX_display[iw] && AX_win[iw])
+    return XSendEvent(AX_display[iw], AX_win[iw], FALSE, 0, (XEvent *) &expose);
+  else
+    return 0;
 }
 
 int atomeyelib_close(int iw) {
