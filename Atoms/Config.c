@@ -3896,7 +3896,7 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
 
   if (xyz) {
     if ((fxyz = fopen(nfname, "r")) == NULL) pe("Cannot open xyz file %s.\n", nfname);
-    if (!read_xyz(fxyz, &at, atomlist, natomlist, frame, 0, 0, 1, 0)) 
+    if (!read_xyz(fxyz, &at, atomlist, natomlist, frame, 0, 0, 1, 0, 0, NULL)) 
       pe("Error reading frame %d from xyz file %s.\n", frame, nfname);
     fclose(fxyz);
   }
