@@ -41,8 +41,8 @@ void bond_xtal_origin_update (int iw)
             V3SUB (&(new_s[DIMENSION*N->list[j]]), &(new_s[DIMENSION*i]), tmp);
             if ( V3NEED_IMAGE(tmp) )
             { /* g<0 means geometric invisibility */
-                C->CYLINDER[j].g = -1;
-                C->CYLINDER[j].radius = -1;
+	      C->CYLINDER[j].g = -1;
+	      C->CYLINDER[j].radius = -1;
             }
             else
             {
@@ -56,6 +56,40 @@ void bond_xtal_origin_update (int iw)
     n[iw].bond_xtal_origin_need_update = FALSE;
     return;
 } /* end bond_xtal_origin_update() */
+
+void arrow_xtal_origin_update(int iw)
+{
+  register int i,j;
+  double ds[3], old_s[3], new_s[3], dr1[3], dr2[3], dr3[3];
+
+  if (arrows->n_lines == 0) return;
+
+  V3mM3 (n[iw].xtal_origin, HI, ds);
+  V3TRIM (ds, ds);
+
+  for (i=0; i<np; i++)
+  {
+    // Save displacements of arrow tip from centre of atom
+    V3SUB( arrows->LINE[3*i].x1, arrows->LINE[3*i].x0, dr1);
+    V3SUB( arrows->LINE[3*i+1].x1, arrows->LINE[3*i].x0, dr2);
+    V3SUB( arrows->LINE[3*i+2].x1, arrows->LINE[3*i].x0, dr3);
+
+    // Place tail of arrow at new center of atom ball
+    V3SUB ( &(s[DIMENSION*i]), ds, new_s );
+    V3TriM ( new_s );
+    V3mM3 ( new_s, H, arrows->LINE[3*i].x0 );
+
+    // 
+    V3ADD(arrows->LINE[3*i].x0, dr1, arrows->LINE[3*i].x1);
+    V3EQV(arrows->LINE[3*i].x1, arrows->LINE[3*i+1].x0);
+    V3EQV(arrows->LINE[3*i].x1, arrows->LINE[3*i+2].x0);
+
+    V3ADD(arrows->LINE[3*i].x0, dr2, arrows->LINE[3*i+1].x1);
+    V3ADD(arrows->LINE[3*i].x0, dr3, arrows->LINE[3*i+2].x1);
+  }
+  n[iw].arrow_xtal_origin_need_update = FALSE;
+  return;
+ }
 
 
 /* shift the crystal along axis-i by amount d*lengthscale*XTAL_SHIFT_GEAR */
@@ -71,6 +105,10 @@ bool xtal_shift (int iw, int i, double d)
     atom_xtal_origin (n[iw].xtal_origin);
     if (n[iw].bond_mode) bond_xtal_origin_update (iw);
     else n[iw].bond_xtal_origin_need_update = TRUE;
+    
+    if (n[iw].arrow_mode) arrow_xtal_origin_update (iw);
+    else n[iw].arrow_xtal_origin_need_update = TRUE;
+
     return (TRUE);
 } /* end xtal_shift() */
 
@@ -98,6 +136,10 @@ bool pointer_grab_xtal_shift (int iw, int to_x, int to_y)
     atom_xtal_origin (n[iw].xtal_origin);
     if (n[iw].bond_mode) bond_xtal_origin_update (iw);
     else n[iw].bond_xtal_origin_need_update = TRUE;
+
+    if (n[iw].arrow_mode) arrow_xtal_origin_update (iw);
+    else n[iw].arrow_xtal_origin_need_update = TRUE;
+
     return (TRUE);
 } /* end pointer_grab_xtal_shift() */
 
@@ -195,6 +237,10 @@ bool pointer_xtal_shift (int iw, int to_x, int to_y)
     atom_xtal_origin (n[iw].xtal_origin);
     if (n[iw].bond_mode) bond_xtal_origin_update (iw);
     else n[iw].bond_xtal_origin_need_update = TRUE;
+
+    if (n[iw].arrow_mode) arrow_xtal_origin_update (iw);
+    else n[iw].arrow_xtal_origin_need_update = TRUE;
+
     return (TRUE);
 } /* end pointer_xtal_shift() */
 
@@ -220,6 +266,10 @@ bool xtal_origin_goto (int iw)
     atom_xtal_origin (n[iw].xtal_origin);
     if (n[iw].bond_mode) bond_xtal_origin_update (iw);
     else n[iw].bond_xtal_origin_need_update = TRUE;
+
+    if (n[iw].arrow_mode) arrow_xtal_origin_update (iw);
+    else n[iw].arrow_xtal_origin_need_update = TRUE;
+
     return (TRUE);
 } /* end xtal_origin_goto() */
 
@@ -236,5 +286,9 @@ bool xtal_origin_zero (int iw)
     atom_xtal_origin (n[iw].xtal_origin);
     if (n[iw].bond_mode) bond_xtal_origin_update (iw);
     else n[iw].bond_xtal_origin_need_update = TRUE;
+
+    if (n[iw].arrow_mode) arrow_xtal_origin_update (iw);
+    else n[iw].arrow_xtal_origin_need_update = TRUE;
+
     return (TRUE);
 } /* end xtal_origin_zero() */
