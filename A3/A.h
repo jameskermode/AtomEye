@@ -84,6 +84,9 @@ typedef struct
     int glob_advance; /* how fast the file list advances */
     Filter_Plane fp[AX_3D_MAX_FILTER_PLANE]; /* sidekick of AX_3D.fp */
     int just_activated_fp;  /* index of the fp under focus */
+
+    int arrow_mode;  /* draw arrows */
+    int arrow_xtal_origin_need_update; /* delayed arrow update due to shift */
 } Navigator;
 
 /* parallel projection */
@@ -117,6 +120,7 @@ extern Tp *tp;
 extern Neighborlist N[1];
 extern AX_3D_Balls B[1];
 extern AX_3D_Cylinders C[1];
+extern AX_3D_Lines arrows[1];
 extern char fbasename[MAX_FILENAME_SIZE];
 extern char config_fname[MAX_FILENAME_SIZE];
 extern const double gearbox[10];
@@ -125,6 +129,7 @@ extern char xterm_identifier[XTERM_IDENTIFIER_SIZE];
 extern Window xterm_win;
 extern Atom_coordination_color CoordColor[ATOM_COORDINATION_MAX+1];
 extern struct Mendeleyev Dmitri[MENDELEYEV_MAX+1];
+extern pthread_mutex_t global_lock;
 
 void paint_scene (int iw);
 bool treatevent (int iw);
@@ -135,6 +140,7 @@ void select_fbasename (char *raw);
 extern int temporary_disable_bond;
 void Config_to_3D_Balls (double atom_r_ratio);
 void Config_to_3D_Bonds (double bond_radius);
+void Config_to_3D_Arrows (int arrow_idx, double scale_factor, double head_height, double head_width, double up[3]);
 bool change_atom_r_ratio (double atom_r_ratio);
 bool change_bond_radius (double bond_radius);
 void hook_to_cylinder (int k, double *hook);
@@ -182,6 +188,7 @@ void evaluate_geo_measures();
 /* utils.c: */
 AX_3D_Lines *plane_wireframe
 (double dx[3], double d0, AX_Float r, AX_Float g, AX_Float b);
+(AX_Float x[3], AX_Float dx[3], AX_Float head_frac, AX_Float head_angle, AX_Float r, AX_Float g, AX_Float b);
 bool treat_numeral_event (int iw, int number);
 bool shift_filter_plane (int iw, double delta);
 bool capture_png (int iw);
