@@ -53,11 +53,7 @@ CUI_GLOBAL Window cui_xterm_win;
 
 /* cui.c */
 double cui_wtime(void);
-#ifdef ATOMEYE_LIB
-int cui_init(int *argc, char ***argv,  void (*on_click)(int atom), void (*on_close)(), void (*on_advance)(char *instr));
-#else
 int cui_init(int *argc, char ***argv);
-#endif
 bool cui_treatevent(int iw);
 bool gui_treatevent(int iw);
 int cui_config_load_A3(Alib_Declare_Config);
@@ -95,7 +91,7 @@ void cui_AX_closewindow(int iw);
 
 #define CUI_AX(IW, type, value) (AX_display[IW] ? (value) : (type)0)
 #define CUI_TITLE(iw) ((!cui_enabled||iw!=cui_iw) ? AX_title[iw] :\
-            strncpy(cui_title+1, AX_title[iw], sizeof(cui_title))-1)
+		       strncpy(cui_title+1, AX_title[iw], sizeof(cui_title)-1))
 
 #undef  AXQueryPointer
 #define AXQueryPointer(iw) CUI_AX(iw, Bool,\

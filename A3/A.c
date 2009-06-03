@@ -14,6 +14,7 @@
 #endif
 
 #ifdef ATOMEYE_LIB
+#include "atomeyelib.h"
 #include "xyz_netcdf.h"
 #endif
 
@@ -29,6 +30,7 @@ Neighborlist N[1]={{0}};
 AX_3D_Balls B[1]={{0}}; /* invisibility flag of AX_3D_Balls: red < 0 */
 /* invisibility flag of AX_3D_Cylinders: radius<=0 */
 AX_3D_Cylinders C[1]={{0}};
+AX_3D_Lines arrows[1] = {{0}};
 /* from this application */
 char fbasename[MAX_FILENAME_SIZE];
 char config_fname[MAX_FILENAME_SIZE];
@@ -39,13 +41,19 @@ Window xterm_win;
 Atom_coordination_color CoordColor[ATOM_COORDINATION_MAX+1];
 struct Mendeleyev Dmitri[MENDELEYEV_MAX+1];
 
+#ifdef ATOMEYE_LIB
+pthread_mutex_t global_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 /* Render scene to shared memory pixmap */
 void paint_scene (int iw)
 {
-    int j;
+  int i,j;
     AX_Carrier bgcarrier;
     AX_Float HH[3][3],cr,cg,cb,ff,fr,fg,fb;
     AX_3D_Define_PW(L);  /* wireframe */
+    AX_Float dx[3];
+    double ddx[3];
 
     bgcarrier = AX_Colorcarrier
         ( n[iw].bgcolor[0], n[iw].bgcolor[1], n[iw].bgcolor[2] );
@@ -118,6 +126,9 @@ void paint_scene (int iw)
             AX_3D_AssignRGB (L->LINE[8],  .45,.45,1);
         }
         AX_3D_Lines_Zprint(iw, L);
+    }
+    if (n[iw].arrow_mode && arrows->n_lines != 0) {
+      AX_3D_Lines_Zprint(iw, arrows);
     }
 #ifdef USE_P3D
     p3dp_zmap_reduce(iw);
@@ -817,6 +828,8 @@ void thread_start (void *icopy)
                 reset_auxiliary_threshold(iw,CONFIG_MAX_AUXILIARY+i);
         n[iw].parallel_projection = 0;
         n[iw].glob_advance = 1;
+	n[iw].arrow_mode = FALSE;
+	n[iw].arrow_xtal_origin_need_update = FALSE;
     }
     AXSETICON(iw);
     AX_plugin_3D_module(iw);
@@ -862,6 +875,10 @@ void thread_start (void *icopy)
         /* XMapWindow(AX_display[iw], xterm_win); */
 #endif
     }
+#ifdef ATOMEYE_LIB
+    /* Initialisation complete */
+    (*atomeyelib_on_new)(iw);    
+#endif
     for (nontrivial_event = TRUE;;)
     { /* blocking is more CPU efficient */
         while (!nontrivial_event)
@@ -870,8 +887,8 @@ void thread_start (void *icopy)
           if (cui_enabled >= 0 && (!cui_enabled || AXPending(iw)))
           {
 #endif
-            AXNextEvent(iw);
-            nontrivial_event = treatevent (iw);
+	    AXNextEvent(iw);
+	    nontrivial_event = treatevent (iw) ;
             for (j=3; ;j*=2)
             { /* preventing long queue to freeze the control */
                 i = AXQLength(iw);
@@ -884,14 +901,18 @@ void thread_start (void *icopy)
                     for (;i--;)
                     {
                         AXNextEvent(iw);
-                        nontrivial_event = nontrivial_event || treatevent (iw);
+			nontrivial_event = nontrivial_event || treatevent (iw);
                     }
                 else break;
             }
 #ifdef USE_CUI
           }
-          if (cui_enabled && !nontrivial_event)
-                nontrivial_event = cui_treatevent(iw) && cui_diligence;
+	  if (cui_enabled && !nontrivial_event) 
+#ifdef ATOMEYE_LIB
+	    nontrivial_event = atomeyelib_treatevent(iw) || cui_treatevent(iw) && cui_diligence;
+#else
+  	    nontrivial_event = cui_treatevent(iw) && cui_diligence;
+#endif
 #endif
         }
         paint_scene(iw);
@@ -918,17 +939,11 @@ void select_fbasename (char *raw)
     return;
 } /* end select_fbasename() */
 
-
 #ifndef ATOMEYE_LIB
 int main (int argc, char *argv[])
-#else
-  int atomeyelib_main(int argc, char *argv[], void (*on_click)(int atom), 
-		      void (*on_close)(), void (*on_advance)(char *instr),
-		      int *done_init)
-#endif
 {
     register int i;
-    int k,god;
+    int k, god;
     double tmp[3];
 #ifdef USE_CUI
     double timing[4];
@@ -939,11 +954,7 @@ int main (int argc, char *argv[])
            (ATOM_COORDINATION_MAX+1)*sizeof(Atom_coordination_color));
     memcpy(Dmitri, MENDELEYEV, (MENDELEYEV_MAX+1)*sizeof(struct Mendeleyev));
 #ifdef USE_CUI
-#ifdef ATOMEYE_LIB
-    if (cui_init(&argc, &argv, on_click, on_close, on_advance))
-#else
     if (cui_init(&argc, &argv))
-#endif
     {
         fprintf(stderr, "Threaded atomistic configuration viewer V%s "
                 "(C) Ju Li %s\nUsage: %s <PDB or CFG file>\n",
@@ -1017,11 +1028,7 @@ int main (int argc, char *argv[])
     guess_to_be_PBC = TRUE;  
     M3InV (H, HI, volume);
     lengthscale = cbrt(volume);
-#ifndef ATOMEYE_LIB
     rebind_CT (Config_Aapp_to_Alib, "", ct, &tp); cr();
-#else
-    rebind_ct (Config_Aapp_to_Alib, "", ct, &tp, NULL); cr();
-#endif
     Neighborlist_Recreate_Form (Config_Aapp_to_Alib, ct, N);
     /* Everything is assumed to be under PBC except overflow */
     /* error treatment is different for PDB and CFG.         */
@@ -1096,11 +1103,13 @@ int main (int argc, char *argv[])
     god = -1;
 #ifdef USE_P3D
     if (p3dp_enabled && setjmp(quit_env)) p3dp_finalize();
-    else
-#endif
-#ifdef ATOMEYE_LIB
-      *done_init = 1;
+    else {
 #endif
       thread_start(&god);
+#ifdef USE_P3D
+    }
+#endif
     return(0);
 } /* end main() */
+
+#endif

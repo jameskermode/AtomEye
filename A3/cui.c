@@ -29,9 +29,10 @@ static int frontend = -1;
 #define nonvacant(iw) (AX_cid[iw]!=0)
 
 #ifdef ATOMEYE_LIB
-static void (*atomeyelib_on_click_atom)(int atom);
-static void (*atomeyelib_on_close)();
-static void (*atomeyelib_on_advance)(char *instr);
+void (*atomeyelib_on_click_atom)(int iw, int atom);
+void (*atomeyelib_on_close)(int iw);
+void (*atomeyelib_on_advance)(int iw, char *instr);
+void (*atomeyelib_on_new)(int iw);
 #endif
 
 double cui_wtime(void)
@@ -759,6 +760,8 @@ static struct isvt {
 #endif
     NAVI(int, just_activated_fp),  /* index of the fp under focus */
 
+    NAVI(int, arrow_mode),
+
     AX3D(v3, x), /* coordinates of the viewpoint */
     AX3D(double, k), /* conversion factor from radian to window pixels*/
     AX3D(v3, V[0]), /* V[i][0-2] is the normalized ith axis of viewport*/
@@ -1020,7 +1023,7 @@ static bool proc_next(int iw, char *instr, char **outstr)
 static bool proc_close(int iw, char *instr, char **outstr)
 {
 #ifdef ATOMEYE_LIB
-  (*atomeyelib_on_close)();
+  (*atomeyelib_on_close)(iw);
 #endif
     if (iw == cui_iw)
         proc_next(iw, NULL, outstr);
@@ -1031,7 +1034,11 @@ static bool proc_close(int iw, char *instr, char **outstr)
     if (p3dp_enabled) longjmp(quit_env, 1);
     else
 #endif
-    pthread_exit ((void *)NULL);
+#ifdef ATOMEYE_LIB
+      /* Make sure we don't close with the lock held */
+      //      pthread_mutex_unlock(&global_lock);      
+#endif
+      pthread_exit ((void *)NULL);
     exit(-1);
 }
 
@@ -1046,11 +1053,8 @@ static bool proc_quit(int iw, char *instr, char **outstr)
 static bool proc_new(int iw, char *instr, char **outstr)
 {
     pthread_t tid;
+    int niw;
 
-#ifdef ATOMEYE_LIB
-    *outstr = "new window creation disabled";
-    return FALSE;
-#endif
 #ifdef USE_P3D
     if (p3dp_enabled) {
         *outstr = "not supported";
@@ -1566,6 +1570,109 @@ static bool proc_toggle_bond_mode(int iw, char *instr, char **outstr)
             bond_atom_color_update (iw);
     }
     return (TRUE);
+}
+
+static bool proc_draw_arrows(int iw, char *instr, char **outstr)
+{
+  int i, j, number, k;
+  char *p, *p1;
+  char fields[7][255];
+  char tmp[255];
+  double scale_factor = 0.0, head_height = 0.1, head_width = 0.05, up[3];
+  
+    if (instr && strcmp(instr, "off") == 0) {
+      n[iw].arrow_mode = FALSE;
+      *outstr = NULL;
+      return TRUE;
+    }
+
+    V3ASSIGN(0.0, 1.0, 0.0, up);
+
+    // Count and tokenise arguments
+    p = instr;
+    k = 0;
+    while ((p1 = strsep(&p, " ")) != NULL) {
+      if (*p1 == '\0') continue;
+      strncpy(fields[k++], p1, 255);
+      if (k > 7) {
+	*outstr = cui_show_syntax;
+	return FALSE;
+      }
+    }
+
+    if (k == 0) {
+      *outstr = cui_show_syntax;
+      return FALSE;
+    }
+    
+    if (sscanf(fields[0], "%d", &number) != 1) {
+      number = -1;
+      for (i=0; i < CONFIG_num_auxiliary; i++) {
+	strncpy(tmp, CONFIG_auxiliary_name[i], 255);
+	tmp[254] = '\0';
+	for (j=strlen(tmp)-1; j>=0; j--)
+	  if (tmp[j] >= '0' && tmp[j] <= '9') tmp[j] = '\0';
+	
+	if (strcasecmp(CONFIG_auxiliary_name[i], fields[0]) == 0 || strcasecmp(tmp, fields[0]) == 0) {
+	  number = i;
+	  break;
+	}
+      }
+    } 
+
+    if (k >= 2) {
+      if (sscanf(fields[1], "%lf", &scale_factor) != 1) {
+	*outstr = cui_show_syntax;
+	return FALSE;
+      }
+    }
+    
+    if (k >= 3) {
+      if (sscanf(fields[2], "%lf", &head_height) != 1) {
+	*outstr = cui_show_syntax;
+	return FALSE;
+      }      
+    }
+
+    if (k >= 4) {
+      if (sscanf(fields[3], "%lf", &head_width) != 1) {
+	*outstr = cui_show_syntax;
+	return FALSE;
+      }
+    }
+
+    if (k >= 5) {
+      if (k == 7) {
+	if ((sscanf(fields[4], "%lf", &up[0]) != 1) ||
+	    (sscanf(fields[5], "%lf", &up[1]) != 1) ||
+	    (sscanf(fields[6], "%lf", &up[2]) != 1)) {
+	*outstr = cui_show_syntax;
+	return FALSE;
+	}      
+      }
+      else {
+	*outstr = cui_show_syntax;
+	return FALSE;
+      }
+    }
+
+    if (XIN(number, 0, CONFIG_MAX_AUXILIARY+MAX_GEO_MEASURES)) {
+        if ( OUW(number,CONFIG_num_auxiliary-2) &&
+             OUW(number-CONFIG_MAX_AUXILIARY,MAX_GEO_MEASURES) ) {
+	  sprintf(buf,"draw_arrows: auxiliaries (%d,%d,%d) out of range\n",number,number+1,number+2);
+	  *outstr = buf;
+	  return (FALSE);
+        }
+        *outstr = NULL;
+	
+	Config_to_3D_Arrows(number, scale_factor, head_height, head_width, up);
+	n[iw].arrow_mode = TRUE;
+
+        return TRUE;
+    }
+
+    *outstr = cui_show_syntax;
+    return FALSE;
 }
 
 
@@ -2795,7 +2902,10 @@ static bool proc_load_config_advance(int iw, char *instr, char **outstr)
   char *p;
 
 #ifdef ATOMEYE_LIB
-  (*atomeyelib_on_advance)(instr);
+  /* release lock during call back so new events can be queued */
+  //  pthread_mutex_unlock(&global_lock);      
+  (*atomeyelib_on_advance)(iw, instr);
+  //pthread_mutex_lock(&global_lock);
   return FALSE;
 #endif
     *outstr = "parameter error";
@@ -3240,6 +3350,10 @@ static bool proc_xtal_origin_goto(int iw, char *instr, char **outstr)
     atom_xtal_origin (n[iw].xtal_origin);
     if (n[iw].bond_mode) bond_xtal_origin_update(iw);
     else n[iw].bond_xtal_origin_need_update = TRUE;
+
+    if (n[iw].arrow_mode) arrow_xtal_origin_update(iw);
+    else n[iw].arrow_xtal_origin_need_update = TRUE;
+
     return TRUE;
 }
 
@@ -3677,6 +3791,7 @@ static struct aec atomeye_commands[] = {
     {AEC_NP(change_bgcolor), CUI_ARG_REQUIRED, "R G B"},
     {AEC_NP(toggle_parallel_projection), NULL, NULL},
     {AEC_NP(toggle_bond_mode), NULL, NULL},
+    {AEC_NP(draw_arrows), CUI_ARG_REQUIRED, "off | number|name [scale factor] [head height] [head width] [up vector]"},
     {AEC_NP(toggle_coordination_coloring), NULL, NULL},
     {AEC_NP(normal_coloring), CUI_ARG_REQUIRED, "[original]"},
     {"original_normal_coloring", proc_normal_coloring, "original", NULL},
@@ -4199,7 +4314,9 @@ bool gui_treatevent(int iw)
                 i = AX_3D_Balls_Zgrab(iw, B, AX_win_x[iw], AX_win_y[iw]);
                 if (i >= 0) {
 #ifdef ATOMEYE_LIB
-		  (*atomeyelib_on_click_atom)(i);
+		  //pthread_mutex_unlock(&global_lock);      
+		  (*atomeyelib_on_click_atom)(iw, i);
+		  //pthread_mutex_lock(&global_lock);
 #endif
 #ifdef USE_P3D
                     if (p3dp_enabled)
@@ -4645,22 +4762,12 @@ static struct co cui_options[] = {
     {NULL, NULL, 0}
 };
 
-#ifdef ATOMEYE_LIB
-int cui_init(int *argc, char ***argv,  void (*on_click)(int atom), void (*on_close)(), void (*on_advance)(char *instr))
-#else
 int cui_init(int *argc, char ***argv)
-#endif
 {
     int i, retval = 0;
     char *str, *display_str = NULL, *TTYname = "/dev/null";
     extern char config_fname[MAX_FILENAME_SIZE];
     extern char xterm_identifier[XTERM_IDENTIFIER_SIZE];
-
-#ifdef ATOMEYE_LIB
-    atomeyelib_on_click_atom = on_click;
-    atomeyelib_on_close = on_close;
-    atomeyelib_on_advance = on_advance;
-#endif
 
     cui_time = cui_wtime();
     cui_xterm = CUI_XTERM_DEFAULT;
@@ -4950,46 +5057,354 @@ renderer:
 /* API functions to be called from python */
 #ifdef ATOMEYE_LIB
 
-#include <xyz_netcdf.h>
-#include <atomeyelib.h>
+#include "xyz_netcdf.h"
+#include "atomeyelib.h"
 
-int atomeyelib_redraw(int iw) {
-  /* send an expose event to the window so that it gets redrawn */
+#define ATOMEYELIB_MAX_EVENTS 10
+#define ATOMEYELIB_STR_LEN 255
 
-  XExposeEvent expose;
-  expose.type = Expose;
-  expose.display = AX_display[iw];
-  expose.window = AX_win[iw];
-  expose.x = 0;
-  expose.y = 0;
-  expose.width = AX_size[iw].width;
-  expose.height = AX_size[iw].height;
-  expose.count = 0;
+typedef struct {
+  int event;
+  char instr[ATOMEYELIB_STR_LEN];
+  void *data;
+} Atomeyelib_events;
 
-  proc_redraw(iw, NULL, NULL);
+#define ATOMEYELIB_MAX_EVENT_ID 5
 
-  if (AX_display[iw] && AX_win[iw])
-    return XSendEvent(AX_display[iw], AX_win[iw], FALSE, 0, (XEvent *) &expose);
-  else
-    return 0;
+Atomeyelib_events atomeyelib_events[AX_MAXWIN][ATOMEYELIB_MAX_EVENTS];
+int atomeyelib_n_events[AX_MAXWIN];
+int atomeyelib_q_head[AX_MAXWIN];
+int atomeyelib_q_tail[AX_MAXWIN];
+
+int atomeyelib_icopy = -1;
+
+extern bool guess_to_be_PBC;
+
+int atomeyelib_init(int argc, char *argv[], void *data)
+{
+    register int i;
+    int k;
+    double tmp[3];
+#ifdef USE_CUI
+    double timing[4];
+#else
+    char command[512], *TTYname;
+#endif
+    memcpy(CoordColor, ATOM_COORDINATION_COLOR,
+           (ATOM_COORDINATION_MAX+1)*sizeof(Atom_coordination_color));
+    memcpy(Dmitri, MENDELEYEV, (MENDELEYEV_MAX+1)*sizeof(struct Mendeleyev));
+#ifdef USE_CUI
+    pthread_mutex_init(&global_lock, NULL);
+    //    pthread_mutex_lock(&global_lock);
+    if (cui_init(&argc, &argv))
+    {
+        fprintf(stderr, "Threaded atomistic configuration viewer V%s "
+                "(C) Ju Li %s\nUsage: %s <PDB or CFG file>\n",
+                AX_VERSION, JLCPL_YRS, argv[0]);
+        return (1);
+    }
+#else
+    if (argc == 2)
+    {
+        if (!command_exists("xterm"))
+        {
+            fprintf(stderr,
+                    "\nAtomEye needs X terminal for some input / output,\n"
+                    "please make sure \"xterm\" command can be found in\n"
+                    "your PATH environment.\n\n");
+            return (1);
+        }
+        TTYname = ttyname(fileno(stderr));
+        TimeRandomize();
+        RandomBase64String(XTERM_IDENTIFIER_SIZE, xterm_identifier);
+        sprintf(command,"xterm -xrm %s -e %s %s %s &",
+                xterm_identifier, argv[0], argv[1], xterm_identifier);
+        execlp("xterm", "xterm", "-bg", "gray40", "-fg", "white",
+               "-sb", "-sl", "3000", "-cr", "yellow", "-fn", "7x13",
+               "-xrm", xterm_identifier,
+               "-e", argv[0], argv[1], xterm_identifier, TTYname, NULL);
+        return (0);
+    }
+    else if ((argc != 4) || (strlen(argv[2]) != XTERM_IDENTIFIER_SIZE-1))
+    {
+        fprintf(stderr, "Threaded atomistic configuration viewer V%s "
+                "(C) Ju Li %s\nUsage: %s <PDB or CFG file>\n",
+                AX_VERSION, JLCPL_YRS, argv[0]);
+        return (1);
+    }
+    strcpy (config_fname, argv[1]);
+    strcpy (xterm_identifier, argv[2]);
+    redirect_stderr_to (wOpen(argv[3]));
+#endif
+#ifdef USE_P3D
+    if (!p3dp_enabled) {
+#endif
+      if (!strstr(config_fname, ".nc") && !strstr(config_fname,".xyz")) {
+    if (!Fexists(config_fname))
+    {
+        pr ("\n** %s: **\n", config_fname);
+        pr ("** There is no such file! **\n");
+        return(1);
+    }
+    if (!Freadable(config_fname))
+    {
+        pr ("\n** %s: **\n", config_fname);
+        pr ("** This file is unreadable! **\n");
+        return(1);
+    }
+      }
+#ifdef USE_P3D
+    }
+#endif
+#ifdef USE_CUI
+    if (cui_enabled && IS_MANAGER) timing[0] = cui_wtime();
+#endif
+    if (data != NULL) {
+      Config_load_libatoms((Atoms *)data, NULL, Config_Aapp_to_Alib);
+      i = CONFIG_CFG_LOADED;
+    } else 
+      i = CONFIG_LOAD (config_fname, Config_Aapp_to_Alib);
+#ifdef USE_CUI
+    if (cui_enabled && IS_MANAGER) timing[1] = cui_wtime() - timing[0];
+#endif
+    for (k=0; k<CONFIG_num_auxiliary; k++)
+        if (*blank_advance(CONFIG_auxiliary_name[k])==EOS)
+            sprintf(CONFIG_auxiliary_name[k], "auxiliary%d", k);
+    /* more functionalities than you may need */
+    guess_to_be_PBC = TRUE;  
+    M3InV (H, HI, volume);
+    lengthscale = cbrt(volume);
+    rebind_ct (Config_Aapp_to_Alib, "", ct, &tp, NULL);
+    Neighborlist_Recreate_Form (Config_Aapp_to_Alib, ct, N);
+    /* Everything is assumed to be under PBC except overflow */
+    /* error treatment is different for PDB and CFG.         */
+    /* CFG would always fold; whereas if the PDB has no      */
+    /* CRYST1 tag, a bounding box H[][] would be used that   */
+    /* is so large that the PBC is in reality detached. If   */
+    if (i == CONFIG_CFG_LOADED)
+        N->s_overflow_err_handler =
+            NEIGHBORLIST_S_OVERFLOW_ERR_HANDLER_FOLD_INTO_PBC;
+    else
+        N->s_overflow_err_handler =
+            NEIGHBORLIST_S_OVERFLOW_ERR_HANDLER_BOUNDING_BOX;
+    if (i == CONFIG_CFG_LOADED)
+        N->small_cell_err_handler =
+	  NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
+    else
+        N->small_cell_err_handler =
+	  NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+    /* the PDB does have CRYST1 tag but still overflows, the */
+    /* above still happens. Only when there is CRYST1 tag    */
+    /* and all atoms are rigorously inside the orthogonal    */
+    /* box can that really tight PBC be achieved. In effect  */
+    /* the s-bounds check for PDB files is a test of whether */
+    /* the author means seriously about his CRYST1 tags.     */
+#ifdef USE_CUI
+    if (cui_enabled &&  IS_MANAGER) timing[0] = cui_wtime();
+    if (cui_enabled && !IS_MANAGER)
+        Neighborlist_Recreate (Config_Aapp_to_Alib, NULL, ct, &tp, N);
+    else
+#endif
+    Neighborlist_Recreate (Config_Aapp_to_Alib, stdout, ct, &tp, N);
+#ifdef USE_CUI
+    if (cui_enabled && IS_MANAGER) timing[2] = cui_wtime() - timing[0];
+#endif
+    /* H[][] may have been modified in Neighborlist_Recreate() */
+    M3InV (H, HI, volume);
+    lengthscale = cbrt(volume);
+    geo_clear_has_evaluated_flags();
+    evaluate_geo_measures(); Free(s1); Free(mass);
+#ifdef USE_CUI
+    if (!cui_enabled || IS_MANAGER) {
+#endif
+    print_coordination_histogram(); cr();
+    if (guess_to_be_PBC)
+    {
+        S3PR("avg. M = %M\n ", avg_M);
+        printf ("avg. microscopic shear strain = %g\n", avg_shear_strain);
+    }
+#ifdef USE_CUI
+    }
+#endif
+    V3ASSIGN (0.5,0.5,0.5,tmp);
+    V3mM3 (tmp,H,cm);
+    rcut_patching = rcut_patch_top = 0;
+    select_fbasename (config_fname);
+#ifdef USE_CUI
+    if (cui_enabled && IS_MANAGER) timing[0] = cui_wtime();
+#endif
+    /* pmemusage(); */
+    Config_to_3D_Balls (DEFAULT_ATOM_R_RATIO);
+    /* pmemusage(); */
+    Config_to_3D_Bonds (DEFAULT_BOND_RADIUS);
+#ifdef USE_CUI
+    if (cui_enabled && IS_MANAGER) {
+        timing[3] = cui_wtime() - timing[0];
+        fprintf(stderr, "config_load:  %.3f\n"
+                        "neighborlist: %.3f\n"
+                        "config_to_3D: %.3f\n", timing[1],timing[2],timing[3]);
+    }
+#endif
+    pmemusage();
+
+    for (i=0; i<AX_MAXWIN; i++){
+      atomeyelib_n_events[i] = 0;
+      atomeyelib_q_head[i] = 0;
+      atomeyelib_q_tail[i] = 0;
+    }
+
+#ifdef USE_P3D
+    if (p3dp_enabled && setjmp(quit_env)) p3dp_finalize();
+#endif
+    //pthread_mutex_unlock(&global_lock);
+    return(0);
 }
 
-int atomeyelib_close(int iw) {
+void atomeyelib_set_handlers(void (*on_click)(int iw, int atom), 
+			     void (*on_close)(int iw), 
+			     void (*on_advance)(int iw, char *instr),
+			     void (*on_new)(int iw))  {
 
-  XKeyEvent event;
-  event.type = KeyPress;
-  event.display = AX_display[iw];
-  event.window = AX_win[iw];
-  event.time = CurrentTime;
-  event.x = 1;
-  event.y = 1;
-  event.same_screen = TRUE;
+  //pthread_mutex_lock(&global_lock);
+  atomeyelib_on_click_atom = on_click;
+  atomeyelib_on_close = on_close;
+  atomeyelib_on_advance = on_advance;
+  atomeyelib_on_new = on_new;
+  //pthread_mutex_unlock(&global_lock);
+}
 
-  event.type = KeyPress;
-  event.keycode = XKeysymToKeycode(AX_display[iw], XK_q);
-  event.state = 0;
+int atomeyelib_open_window(int copy)
+{
+  pthread_t tid;
+  int iw;
 
-  return XSendEvent(AX_display[iw], AX_win[iw], FALSE, 0, (XEvent *) &event);
+  if (copy != -1 && !nonvacant(copy)) {
+    return -1;
+  }
+
+  atomeyelib_icopy = copy;
+
+  pthread_create (&tid, NULL, (void *(*)(void *))
+		  thread_start,
+		  (void *)(&atomeyelib_icopy));
+
+  /* find a vacant window slot */
+  for ( iw = 0; (iw < AX_MAXWIN) && nonvacant(iw); iw++ );
+
+  return iw;
+}
+
+int atomeyelib_queueevent(int iw, int event, char *instr, void *data, char *outstr) {
+
+  XExposeEvent expose;
+  Display *disp;
+  
+  if (atomeyelib_n_events[iw]+1 == ATOMEYELIB_MAX_EVENTS) {
+    strcpy(outstr, "atomeyelib_queueevent: too many atomeyelib events.");
+    return 0;
+  }
+
+  if (event < 1 || event > ATOMEYELIB_MAX_EVENT_ID) {
+    sprintf(outstr, "atomeyelib_queueevent: event %d out of range", event); 
+    return 0;
+  }
+
+  if (strlen(instr) > ATOMEYELIB_STR_LEN) {
+    strcpy(outstr, "atomeyelib_queueevent: instr too long");
+    return 0;
+  }
+
+  if (!nonvacant(iw)) {
+    sprintf(outstr, "bad window id %d", iw);
+    return 0;
+  }
+
+  //  printf("iw=%d queueing event type %d params %s data %x position %d of %d\n", iw, event, instr, data, atomeyelib_q_tail[iw], atomeyelib_n_events[iw]+1);
+
+  pthread_mutex_lock(&global_lock);
+
+  atomeyelib_events[iw][atomeyelib_q_tail[iw]].event = event;
+  strncpy(atomeyelib_events[iw][atomeyelib_q_tail[iw]].instr, instr, ATOMEYELIB_STR_LEN);
+  atomeyelib_events[iw][atomeyelib_q_tail[iw]].data = data;
+  
+  atomeyelib_n_events[iw]++;
+  atomeyelib_q_tail[iw]++;
+  if (atomeyelib_q_tail[iw] == ATOMEYELIB_MAX_EVENTS) atomeyelib_q_tail[iw] = 0;
+
+  pthread_mutex_unlock(&global_lock);
+
+  //  printf("iw=%d after enqueue: n=%d, head=%d, tail=%d\n", iw, atomeyelib_n_events[iw], atomeyelib_q_head[iw], atomeyelib_q_tail[iw]);
+
+  // send an expose event to trigger the main loop
+  // we have to reopen the display since Display IDs are not valid across threads
+
+  if (AX_display[iw] && AX_win[iw]) {
+    disp = XOpenDisplay(NULL);
+    
+    expose.type = Expose;
+    expose.display = AX_display[iw];
+    expose.window = AX_win[iw];
+    expose.x = 0;
+    expose.y = 0;
+    expose.width = AX_size[iw].width;
+    expose.height = AX_size[iw].height;
+    expose.count = 0;
+
+    //    printf("sending expose event\n");
+    XSendEvent(disp, AX_win[iw], FALSE, 0, (XEvent *) &expose);
+    XCloseDisplay(disp);
+  }
+
+  return 1;
+}
+
+bool atomeyelib_treatevent(int iw) {
+
+  char buff[255];
+  char **outstr;
+  int redraw = 0;
+  int qhead;
+
+  outstr = &buff;
+
+  if (atomeyelib_n_events[iw] == 0) return FALSE;
+
+  pthread_mutex_lock(&global_lock);
+
+  qhead = atomeyelib_q_head[iw];
+  atomeyelib_n_events[iw]--;
+  atomeyelib_q_head[iw]++;
+  if (atomeyelib_q_head[iw] == ATOMEYELIB_MAX_EVENTS) atomeyelib_q_head[iw] = 0;
+
+  pthread_mutex_unlock(&global_lock);
+
+  //  printf("iw=%d dispatching event type %d position %d of %d\n", iw, atomeyelib_events[iw][qhead].event, 
+  //  	 atomeyelib_q_head[iw], atomeyelib_n_events[iw]);
+  switch (atomeyelib_events[iw][qhead].event) {
+  case ATOMEYELIB_REDRAW:
+    redraw = 1;
+    break;
+  case ATOMEYELIB_RUN_COMMAND:
+    //    printf("dispatching %s\n", atomeyelib_events[iw][qhead].instr);
+    redraw = atomeyelib_run_command(iw, atomeyelib_events[iw][qhead].instr, outstr);
+    if (outstr != NULL)
+      fprintf(stderr, *outstr);
+    break;
+  case ATOMEYELIB_LOAD_ATOMS:
+    atomeyelib_load_libatoms(iw, (Atoms *)atomeyelib_events[iw][qhead].data, 
+			     atomeyelib_events[iw][qhead].instr, outstr);
+    if (outstr != NULL)
+      fprintf(stderr, *outstr);
+    redraw = 1;
+    break;
+  default:
+    pe("atomeyelib_treatevent: iw=%d bad event type %d\n", iw, atomeyelib_events[iw][qhead].event);
+  }
+
+
+  //  printf("atomeyelib_treatevent returning %d\n", redraw);
+  //  printf("iw=%d after dispatch: n=%d, head=%d, tail=%d\n", iw, atomeyelib_n_events[iw], atomeyelib_q_head[iw], atomeyelib_q_tail[iw]);
+  return redraw;
 }
 
 int atomeyelib_run_command(int iw, char *line, char **outstr) {
@@ -5031,7 +5446,6 @@ int atomeyelib_run_command(int iw, char *line, char **outstr) {
   else
     *outstr = "unknown command";
 
-  if (result) atomeyelib_redraw(iw);
   return result;
 }
 
@@ -5042,22 +5456,16 @@ int atomeyelib_load_libatoms(int iw, Atoms *atoms, char *title, char **outstr)
     V3 hook_s, tmp, dx;
     char *old_symbol=NULL;
     bool incompatible_config;
-/*     static int firsttime = 1; */
     
     *outstr = NULL;
 
-    n[iw].suppress_printout = 1;
-
-/*     if (!firsttime) { */
-/*       firsttime = 0; */
-/*       if (n[iw].anchor >= 0) { */
-/*         /\* the new configuration may not even have the atom *\/ */
-/*         V3EQV (B->BALL[n[iw].anchor].x, n[iw].hook); */
-/*         n[iw].anchor = -1; */
-/*       } */
-/*       /\* hook_s[] is what is kept invariant *\/ */
-/*       V3mM3 (n[iw].hook, HI, hook_s); */
-/*     } */
+    if (n[iw].anchor >= 0) {
+      /* the new configuration may not even have the atom */
+      V3EQV (B->BALL[n[iw].anchor].x, n[iw].hook);
+      n[iw].anchor = -1;
+    }
+    /* hook_s[] is what is kept invariant */
+    V3mM3 (n[iw].hook, HI, hook_s);
 
     old_np = np;
     CLONE(symbol, SYMBOL_SIZE*np, char, old_symbol);
@@ -5128,7 +5536,7 @@ int atomeyelib_load_libatoms(int iw, Atoms *atoms, char *title, char **outstr)
     }
     if (!temporary_disable_bond) Config_to_3D_Bonds (n[iw].bond_radius);
 
-    strcpy(fbasename,title);
+    //    strcpy(fbasename,title);
 
     if ((n[iw].xtal_mode) && (n[iw].color_mode == COLOR_MODE_COORD))
         assign_coordination_color(iw);
@@ -5138,7 +5546,8 @@ int atomeyelib_load_libatoms(int iw, Atoms *atoms, char *title, char **outstr)
         /*scratch_color (iw);*/
         proc_scratch_coloring(iw, "", outstr);
     else {
-      strcpy (AX_title[iw],fbasename);
+      strncpy (AX_title[iw],title,AX_MAXSTRSIZE);
+      AX_title[iw][AX_MAXSTRSIZE-1] = '\0';
       AXSetName (iw);
       if (!temporary_disable_bond) {
 	bond_xtal_origin_update (iw);
@@ -5152,52 +5561,11 @@ error:
     return FALSE;  
 }
 
-
-bool atomeyelib_help(int iw, char *instr, char **outstr)
-{
-    if (!instr || !*instr)
-        *outstr = cui_show_syntax;
-    else {
-        struct aec *aecp;
-        char name[CUI_LINEMAX] = "", *s;
-        strncpy(buf, instr, sizeof(buf));
-        s = cui_stripspace(buf);
-        sscanf(s, " %[^ ]", name);
-        if ((aecp = aecp_byname(name))) {
-            if (aecp->syntax)
-                sprintf(buf, "%s%s %s", cui_show_syntax, name, aecp->syntax);
-            else
-                sprintf(buf, "%s%s",    cui_show_syntax, name);
-        }
-        else {
-            sprintf(buf, "%sunknown command \"%s\"", cui_show_syntax, name);
-        }
-        *outstr = buf;
-    }
-    return FALSE;
+void atomeyelib_set_title(int iw, char *title) {
+  strncpy (AX_title[iw],title,AX_MAXSTRSIZE);
+  AX_title[iw][AX_MAXSTRSIZE-1] = '\0';
+  AXSetName (iw);
 }
 
-
-/* int atomeyelib_set_output(int on_off) */
-/* { */
-/*   static int stdout_fd = -1; */
-/*   static fpos_t stdout_pos;  */
-
-/*   if (on_off) { */
-/*     if (stdout_fd != -1) { */
-/*       fflush(stdout); */
-/*       dup2(stdout_fd, fileno(stdout)); */
-/*       close(stdout_fd); */
-/*       clearerr(stdout); */
-/*       fsetpos(stdout, &stdout_pos);  */
-/*     } */
-/*   } else { */
-/*     fflush(stdout); */
-/*     fgetpos(stdout, &stdout_pos); */
-/*     stdout_fd = dup(fileno(stdout)); */
-/*     freopen("/dev/null", "w", stdout); */
-/*   } */
-/*   return TRUE; */
-/* } */
 
 #endif
