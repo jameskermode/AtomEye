@@ -56,6 +56,72 @@ void Config_to_3D_Bonds (double bond_radius)
 } /* end Config_to_3D_Bonds() */
 
 
+/* Allocate arrows */
+void Config_to_3D_Arrows(int arrow_idx, double scale_factor, double head_height, double head_width, double up[3])
+{
+  register int i, j;
+  double dx[3], head[3], head1[3], perp[3], perp2[3], sum;
+
+  AX_3D_Lines_Realloc(arrows, 3*np);
+  
+  /* auto scale */
+  if (scale_factor == 0.0) {
+    sum = 0.0;
+    for (i=0; i<np; i++) {
+      dx[0] = *(CONFIG_auxiliary[arrow_idx+0]+i);
+      dx[1] = *(CONFIG_auxiliary[arrow_idx+1]+i);
+      dx[2] = *(CONFIG_auxiliary[arrow_idx+2]+i);
+
+      sum += V3LENGTH(dx);
+    }
+    scale_factor = 1.0/(sum/np);
+    printf("Config_to_3D_Arrows: average magnitude = %f, scale_factor set to %f\n", 1.0/scale_factor, scale_factor);
+  }
+
+  for (i=0; i<np; i++)
+  {
+    /* Todo - colour lines ? */
+    AX_3D_AssignRGB (arrows->LINE[3*i],   0.0, 0.0, 0.0);
+    AX_3D_AssignRGB (arrows->LINE[3*i+1], 0.0, 0.0, 0.0);
+    AX_3D_AssignRGB (arrows->LINE[3*i+2], 0.0, 0.0, 0.0);
+
+    dx[0] = *(CONFIG_auxiliary[arrow_idx+0]+i)*scale_factor;
+    dx[1] = *(CONFIG_auxiliary[arrow_idx+1]+i)*scale_factor;
+    dx[2] = *(CONFIG_auxiliary[arrow_idx+2]+i)*scale_factor;
+
+    if (V3EQZERO(dx)) {
+      for (j=0; j<3; j++) {
+	V3EQV(B->BALL[i].x, arrows->LINE[3*i+j].x0);
+	V3EQV(B->BALL[i].x, arrows->LINE[3*i+j].x1);
+      }
+      
+    } else {
+      V3ADD(B->BALL[i].x, dx, head);
+      V3EQV(B->BALL[i].x, arrows->LINE[3*i+0].x0);
+      V3EQV(head, arrows->LINE[3*i+0].x1);
+      V3EQV(head, arrows->LINE[3*i+1].x0);
+      V3EQV(head, arrows->LINE[3*i+2].x0);
+
+      V3CROSS(dx, up, perp2);
+
+      if (V3EQZERO(perp2)) {
+	V3ASSIGN(1.0, 0.0, 0.0,perp);
+      } else {
+	V3CROSS(dx, perp2, perp);
+	V3normalize(perp);
+      }
+      V3mul(head_width*V3LENGTH(dx),perp,perp);
+      
+      V3EQV(dx, head1);
+      V3mul(head_height,head1,head1);
+      V3SUB(head,head1,head1);
+    
+      V3ADD(head1,perp,arrows->LINE[3*i+1].x1);
+      V3SUB(head1,perp,arrows->LINE[3*i+2].x1);
+    }
+  }
+}
+
 bool change_atom_r_ratio (double atom_r_ratio)
 {
     register int i;
