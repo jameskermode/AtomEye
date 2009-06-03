@@ -3701,7 +3701,7 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
       strcpy(CONFIG_auxiliary_name[entry_count], atoms->property_name[i]);
       entry_count++;
     }
-    else
+    else {
       for (j=0; j<atoms->property_ncols[i]; j++) {
 	if (entry_count == CONFIG_MAX_AUXILIARY) {
 	  Fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
@@ -3712,6 +3712,9 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
 	sprintf(CONFIG_auxiliary_name[entry_count], "%s%d", atoms->property_name[i], j);
 	entry_count++;
       }
+      //TODO: add %s_mag aux prop here with magnitude of vector
+    }
+
   }
 
  LA_AUX_PROPS_DONE:
@@ -3741,6 +3744,7 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
     }
     V3mulM3(x,g,sp);                // Convert to fractional coordinates
     (*s)[3*n] = sp[0]; (*s)[3*n+1] = sp[1]; (*s)[3*n+2] = sp[2];
+    //printf("%d (%f %f %f) (%f %f %f)\n", n, x[0], x[1], x[2], (*s)[3*n], (*s)[3*n+1], (*s)[3*n+2]);
     safe_symbol(&property_str(atoms, species_idx, 0, n),SYMBOL(n));
 
     // Auxiliary properties
@@ -3749,26 +3753,28 @@ void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
       if (i == species_idx || i == pos_idx) continue;
 
       for (j=0; j < atoms->property_ncols[i]; j++) {
-	if (naux+j >= CONFIG_MAX_AUXILIARY) goto AUX_PROP_COPY_ABORT;
+	if (naux >= CONFIG_MAX_AUXILIARY) goto AUX_PROP_COPY_ABORT;
 	//printf("%s[%d,%d] type %d\n", atoms->property_name[i], n, j, atoms->property_type[i]);
 	switch (atoms->property_type[i]) {
 	case(PROPERTY_INT):
-	  *(CONFIG_auxiliary[naux+j]+n) = (double)property_int(atoms, i, j, n);
+	  *(CONFIG_auxiliary[naux]+n) = (double)property_int(atoms, i, j, n);
+	  naux++;
 	  break;
 	
 	case(PROPERTY_REAL):
-	  *(CONFIG_auxiliary[naux+j]+n) = property_real(atoms, i, j, n);
+	  *(CONFIG_auxiliary[naux]+n) = property_real(atoms, i, j, n);
+	  naux++;
 	  break;
 
 	case(PROPERTY_LOGICAL):
-	  *(CONFIG_auxiliary[naux+j]+n) = (double)property_logical(atoms, i, j, n);
+	  *(CONFIG_auxiliary[naux]+n) = (double)property_logical(atoms, i, j, n);
+	  naux++;
 	  break;
 
 	case(PROPERTY_STR):
 	  break;
 	}
       }
-      naux += atoms->property_ncols[i];
     }
   AUX_PROP_COPY_ABORT:
     ;
