@@ -760,7 +760,14 @@ static struct isvt {
 #endif
     NAVI(int, just_activated_fp),  /* index of the fp under focus */
 
-    NAVI(int, arrow_mode),
+    NAVI(int, arrow_mode),                 /* draw arrows */                                                                                       
+    NAVI(int, arrow_idx),		   /* aux prop index to use for drawing arrows. vector is taken as (arrow_idx,arrow_idx+1,arrow_idx+2) */  
+    NAVI(double, arrow_scale_factor),	   /* multiplicative scale factor for arrow length. Default is zero which autoscales */                    
+    NAVI(double, arrow_head_height),	   /* arrow head height, as fraction of arrow length. Default 0.1 */                                       
+    NAVI(double, arrow_head_width),	   /* arrow head half-width, as fraction of arrow length. Default 0.05 */                                  
+    NAVI(v3, arrow_up[0]),		   /* up vector for arrow heads. heads are drawn in the plane defined by their direction and this vector */
+    NAVI(v3, arrow_up[1]),		   
+    NAVI(v3, arrow_up[2]),
 
     AX3D(v3, x), /* coordinates of the viewpoint */
     AX3D(double, k), /* conversion factor from radian to window pixels*/
@@ -1574,19 +1581,16 @@ static bool proc_toggle_bond_mode(int iw, char *instr, char **outstr)
 
 static bool proc_draw_arrows(int iw, char *instr, char **outstr)
 {
-  int i, j, number, k;
+  int i, j, k;
   char *p, *p1;
   char fields[7][255];
   char tmp[255];
-  double scale_factor = 0.0, head_height = 0.1, head_width = 0.05, up[3];
   
     if (instr && strcmp(instr, "off") == 0) {
       n[iw].arrow_mode = FALSE;
       *outstr = NULL;
       return TRUE;
     }
-
-    V3ASSIGN(0.0, 1.0, 0.0, up);
 
     // Count and tokenise arguments
     p = instr;
@@ -1605,8 +1609,8 @@ static bool proc_draw_arrows(int iw, char *instr, char **outstr)
       return FALSE;
     }
     
-    if (sscanf(fields[0], "%d", &number) != 1) {
-      number = -1;
+    if (sscanf(fields[0], "%d", &n[iw].arrow_idx) != 1) {
+      n[iw].arrow_idx = -1;
       for (i=0; i < CONFIG_num_auxiliary; i++) {
 	strncpy(tmp, CONFIG_auxiliary_name[i], 255);
 	tmp[254] = '\0';
@@ -1614,28 +1618,28 @@ static bool proc_draw_arrows(int iw, char *instr, char **outstr)
 	  if (tmp[j] >= '0' && tmp[j] <= '9') tmp[j] = '\0';
 	
 	if (strcasecmp(CONFIG_auxiliary_name[i], fields[0]) == 0 || strcasecmp(tmp, fields[0]) == 0) {
-	  number = i;
+	  n[iw].arrow_idx = i;
 	  break;
 	}
       }
     } 
 
     if (k >= 2) {
-      if (sscanf(fields[1], "%lf", &scale_factor) != 1) {
+      if (sscanf(fields[1], "%lf", &(n[iw].arrow_scale_factor)) != 1) {
 	*outstr = cui_show_syntax;
 	return FALSE;
       }
     }
     
     if (k >= 3) {
-      if (sscanf(fields[2], "%lf", &head_height) != 1) {
+      if (sscanf(fields[2], "%lf", &(n[iw].arrow_head_height)) != 1) {
 	*outstr = cui_show_syntax;
 	return FALSE;
       }      
     }
 
     if (k >= 4) {
-      if (sscanf(fields[3], "%lf", &head_width) != 1) {
+      if (sscanf(fields[3], "%lf", &(n[iw].arrow_head_width)) != 1) {
 	*outstr = cui_show_syntax;
 	return FALSE;
       }
@@ -1643,9 +1647,9 @@ static bool proc_draw_arrows(int iw, char *instr, char **outstr)
 
     if (k >= 5) {
       if (k == 7) {
-	if ((sscanf(fields[4], "%lf", &up[0]) != 1) ||
-	    (sscanf(fields[5], "%lf", &up[1]) != 1) ||
-	    (sscanf(fields[6], "%lf", &up[2]) != 1)) {
+	if ((sscanf(fields[4], "%lf", &(n[iw].arrow_up[0])) != 1) ||
+	    (sscanf(fields[5], "%lf", &(n[iw].arrow_up[1])) != 1) ||
+	    (sscanf(fields[6], "%lf", &(n[iw].arrow_up[2])) != 1)) {
 	*outstr = cui_show_syntax;
 	return FALSE;
 	}      
@@ -1656,17 +1660,19 @@ static bool proc_draw_arrows(int iw, char *instr, char **outstr)
       }
     }
 
-    if (XIN(number, 0, CONFIG_MAX_AUXILIARY+MAX_GEO_MEASURES)) {
-        if ( OUW(number,CONFIG_num_auxiliary-2) &&
-             OUW(number-CONFIG_MAX_AUXILIARY,MAX_GEO_MEASURES) ) {
-	  sprintf(buf,"draw_arrows: auxiliaries (%d,%d,%d) out of range\n",number,number+1,number+2);
+    if (XIN(n[iw].arrow_idx, 0, CONFIG_MAX_AUXILIARY+MAX_GEO_MEASURES)) {
+        if ( OUW(n[iw].arrow_idx,CONFIG_num_auxiliary-2) &&
+             OUW(n[iw].arrow_idx-CONFIG_MAX_AUXILIARY,MAX_GEO_MEASURES) ) {
+	  sprintf(buf,"draw_arrows: auxiliaries (%d,%d,%d) out of range\n",n[iw].arrow_idx,n[iw].arrow_idx+1,n[iw].arrow_idx+2);
 	  *outstr = buf;
 	  return (FALSE);
         }
         *outstr = NULL;
-	
-	Config_to_3D_Arrows(number, scale_factor, head_height, head_width, up);
+
 	n[iw].arrow_mode = TRUE;
+	Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
+			    n[iw].arrow_head_height, n[iw].arrow_head_width, 
+			    n[iw].arrow_up);
 
         return TRUE;
     }
@@ -2871,6 +2877,12 @@ static bool proc_load_config(int iw, char *instr, char **outstr)
                 reset_auxiliary_threshold(iw,CONFIG_MAX_AUXILIARY+i);
     }
     if (!temporary_disable_bond) Config_to_3D_Bonds (n[iw].bond_radius);
+
+    if (n[iw].arrow_mode)
+      Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
+			  n[iw].arrow_head_height, n[iw].arrow_head_width, 
+			  n[iw].arrow_up);
+
     select_fbasename (config_fname);
     if ((n[iw].xtal_mode) && (n[iw].color_mode == COLOR_MODE_COORD))
         assign_coordination_color(iw);
@@ -5535,6 +5547,11 @@ int atomeyelib_load_libatoms(int iw, Atoms *atoms, char *title, char **outstr)
                 reset_auxiliary_threshold(iw,CONFIG_MAX_AUXILIARY+i);
     }
     if (!temporary_disable_bond) Config_to_3D_Bonds (n[iw].bond_radius);
+
+    if (n[iw].arrow_mode)
+      Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
+			  n[iw].arrow_head_height, n[iw].arrow_head_width, 
+			  n[iw].arrow_up);
 
     //    strcpy(fbasename,title);
 

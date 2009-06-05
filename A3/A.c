@@ -830,6 +830,11 @@ void thread_start (void *icopy)
         n[iw].glob_advance = 1;
 	n[iw].arrow_mode = FALSE;
 	n[iw].arrow_xtal_origin_need_update = FALSE;
+	n[iw].arrow_idx = 0;
+	n[iw].arrow_scale_factor = 0.0;
+	n[iw].arrow_head_height = 0.1;
+	n[iw].arrow_head_width = 0.05;
+	V3ASSIGN(0.0,1.0,0.0, n[iw].arrow_up);
     }
     AXSETICON(iw);
     AX_plugin_3D_module(iw);

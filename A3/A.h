@@ -85,8 +85,14 @@ typedef struct
     Filter_Plane fp[AX_3D_MAX_FILTER_PLANE]; /* sidekick of AX_3D.fp */
     int just_activated_fp;  /* index of the fp under focus */
 
-    int arrow_mode;  /* draw arrows */
+    int arrow_mode;                    /* draw arrows */
     int arrow_xtal_origin_need_update; /* delayed arrow update due to shift */
+    int arrow_idx;                     /* aux prop index to use for drawing arrows. vector is taken as (arrow_idx,arrow_idx+1,arrow_idx+2) */
+    double arrow_scale_factor;         /* multiplicative scale factor for arrow length. Default is zero which autoscales */
+    double arrow_head_height;          /* arrow head height, as fraction of arrow length. Default 0.1 */
+    double arrow_head_width;           /* arrow head half-width, as fraction of arrow length. Default 0.05 */
+    double arrow_up[3];                /* up vector for arrow heads. heads are drawn in the plane defined by their direction and this vector */
+    
 } Navigator;
 
 /* parallel projection */
@@ -188,7 +194,6 @@ void evaluate_geo_measures();
 /* utils.c: */
 AX_3D_Lines *plane_wireframe
 (double dx[3], double d0, AX_Float r, AX_Float g, AX_Float b);
-(AX_Float x[3], AX_Float dx[3], AX_Float head_frac, AX_Float head_angle, AX_Float r, AX_Float g, AX_Float b);
 bool treat_numeral_event (int iw, int number);
 bool shift_filter_plane (int iw, double delta);
 bool capture_png (int iw);
