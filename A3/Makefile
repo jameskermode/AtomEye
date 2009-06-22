@@ -44,7 +44,7 @@ USE_MY_LIB = \
    -lAX -lAtoms -lVecMat3 -lVecMat -lIO -lScalar -lTimer
 
 CFLAGS += -D_$(SYS) ${CCFLAGS} -I${MY_INC_DIR} \
-	-I.. -DUSE_CUI ${ATOMEYE_LIB}
+	-I.. -I. -DUSE_CUI ${ATOMEYE_LIB}
 LDFLAGS += -L${MY_LIB_DIR} ${USE_MY_LIB} ${SYSTEM_LIB_FLAG} ${USE_SYSTEM_LIB}
 
 .PHONY: all  i install  c clean  b backup  t test  g  r relink  a access
