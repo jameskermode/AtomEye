@@ -27,6 +27,8 @@ else
   include Makefile.${QUIP_ARCH}
 endif
 
+FC = ${F77}
+
 USE_SYSTEM_LIB = ${ATOMEYE_SYSTEM_LIB}
 
 MY_BIN_DIR = ../bin
