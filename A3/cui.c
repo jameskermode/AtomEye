@@ -5373,11 +5373,9 @@ int atomeyelib_queueevent(int iw, int event, char *instr, void *data, char *outs
 bool atomeyelib_treatevent(int iw) {
 
   char buff[255];
-  char **outstr;
+  char *outstr;
   int redraw = 0;
   int qhead;
-
-  outstr = &buff;
 
   if (atomeyelib_n_events[iw] == 0) return FALSE;
 
@@ -5398,15 +5396,15 @@ bool atomeyelib_treatevent(int iw) {
     break;
   case ATOMEYELIB_RUN_COMMAND:
     //    printf("dispatching %s\n", atomeyelib_events[iw][qhead].instr);
-    redraw = atomeyelib_run_command(iw, atomeyelib_events[iw][qhead].instr, outstr);
+    redraw = atomeyelib_run_command(iw, atomeyelib_events[iw][qhead].instr, &outstr);
     if (outstr != NULL)
-      fprintf(stderr, *outstr);
+      fprintf(stderr, outstr);
     break;
   case ATOMEYELIB_LOAD_ATOMS:
     atomeyelib_load_libatoms(iw, (Atoms *)atomeyelib_events[iw][qhead].data, 
-			     atomeyelib_events[iw][qhead].instr, outstr);
+			     atomeyelib_events[iw][qhead].instr, &outstr);
     if (outstr != NULL)
-      fprintf(stderr, *outstr);
+      fprintf(stderr, outstr);
     redraw = 1;
     break;
   default:
@@ -5469,8 +5467,6 @@ int atomeyelib_load_libatoms(int iw, Atoms *atoms, char *title, char **outstr)
     char *old_symbol=NULL;
     bool incompatible_config;
     
-    *outstr = NULL;
-
     if (n[iw].anchor >= 0) {
       /* the new configuration may not even have the atom */
       V3EQV (B->BALL[n[iw].anchor].x, n[iw].hook);
