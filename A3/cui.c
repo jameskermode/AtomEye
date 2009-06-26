@@ -2878,6 +2878,11 @@ static bool proc_load_config(int iw, char *instr, char **outstr)
     }
     if (!temporary_disable_bond) Config_to_3D_Bonds (n[iw].bond_radius);
 
+    if (n[iw].arrow_idx >= CONFIG_num_auxiliary) {
+      n[iw].arrow_idx = 0;
+      n[iw].arrow_mode = 0;
+    }
+
     if (n[iw].arrow_mode)
       Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
 			  n[iw].arrow_head_height, n[iw].arrow_head_width, 
@@ -5371,9 +5376,7 @@ int atomeyelib_queueevent(int iw, int event, char *instr, void *data, char *outs
 }
 
 bool atomeyelib_treatevent(int iw) {
-
-  char buff[255];
-  char *outstr;
+  char *outstr = NULL;
   int redraw = 0;
   int qhead;
 
@@ -5543,6 +5546,11 @@ int atomeyelib_load_libatoms(int iw, Atoms *atoms, char *title, char **outstr)
                 reset_auxiliary_threshold(iw,CONFIG_MAX_AUXILIARY+i);
     }
     if (!temporary_disable_bond) Config_to_3D_Bonds (n[iw].bond_radius);
+
+    if (n[iw].arrow_idx >= CONFIG_num_auxiliary) {
+      n[iw].arrow_idx = 0;
+      n[iw].arrow_mode = 0;
+    }
 
     if (n[iw].arrow_mode)
       Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
