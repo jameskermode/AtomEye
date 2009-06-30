@@ -2878,7 +2878,7 @@ static bool proc_load_config(int iw, char *instr, char **outstr)
     }
     if (!temporary_disable_bond) Config_to_3D_Bonds (n[iw].bond_radius);
 
-    if (n[iw].arrow_idx >= CONFIG_num_auxiliary) {
+    if (n[iw].arrow_idx >= CONFIG_num_auxiliary-2) {
       n[iw].arrow_idx = 0;
       n[iw].arrow_mode = 0;
     }
