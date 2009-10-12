@@ -3280,8 +3280,9 @@ void Config_load_xyz (char *fname, FILE *info, Alib_Declare_Config)
   char format[3+4*(CONFIG_MAX_AUXILIARY+DIMENSION+DIMENSION)];
   char fields[3*CONFIG_MAX_AUXILIARY][TERMSIZE];
   char *p, *p1, *framestr, *nfname;
-  long frames[XYZ_MAX_FRAMES];
-  int  atoms[XYZ_MAX_FRAMES];
+  long *frames;
+  int  *atoms;
+  int frames_array_size;
   FILE *in, *filter;
   M3 g;
   double x[3], sp[3];
@@ -3298,7 +3299,8 @@ void Config_load_xyz (char *fname, FILE *info, Alib_Declare_Config)
     strcpy(buf2, "first");
     framestr = buf2;
   }
-  n_frame = xyz_find_frames(nfname, frames, atoms);
+  frames_array_size = 0;
+  n_frame = xyz_find_frames(nfname, &frames, &atoms, &frames_array_size);
 
   strcpy(buf3,nfname);
   strcat(buf3,".filter");
@@ -3856,7 +3858,7 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
   }
 
   if (xyz) {
-    n_frame = xyz_find_frames(nfname, at.frames, at.atoms);
+    n_frame = xyz_find_frames(nfname, &(at.frames), &(at.atoms), &(at.frames_array_size));
     if (n_frame == 0) pe("Error building frame index");
     Fprintf(stderr, "got xyz file with %d frames\n", n_frame);
     at.got_index = 1;

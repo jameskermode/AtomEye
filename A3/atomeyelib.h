@@ -21,6 +21,7 @@ int atomeyelib_open_window(int icopy);
 void atomeyelib_set_title(int iw, char *title);
 int atomeyelib_treatevent(int iw);
 int atomeyelib_queueevent(int iw, int event, char *instr, void *data, char *outstr);
+void atomeyelib_wait(int iw);
 
 
 #endif

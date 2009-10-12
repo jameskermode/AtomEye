@@ -2680,8 +2680,10 @@ static bool proc_capture(int iw, char *instr, char **outstr)
                          absolute_pathname(fname));
                 break;
             }
+#ifndef ATOMEYE_LIB
             if (AX_display[iw] && !cui_xterm_win)
                 printf(danswer);
+#endif
             strncat(danswer, CUI_PROTOCOL_OK, sizeof(danswer));
             *outstr = danswer;
         }
@@ -5400,14 +5402,16 @@ bool atomeyelib_treatevent(int iw) {
   case ATOMEYELIB_RUN_COMMAND:
     //    printf("dispatching %s\n", atomeyelib_events[iw][qhead].instr);
     redraw = atomeyelib_run_command(iw, atomeyelib_events[iw][qhead].instr, &outstr);
-    if (outstr != NULL)
-      fprintf(stderr, outstr);
+
+    //if (outstr != NULL)
+    //fprintf(stderr, outstr);
+
     break;
   case ATOMEYELIB_LOAD_ATOMS:
     atomeyelib_load_libatoms(iw, (Atoms *)atomeyelib_events[iw][qhead].data, 
 			     atomeyelib_events[iw][qhead].instr, &outstr);
-    if (outstr != NULL)
-      fprintf(stderr, outstr);
+    //if (outstr != NULL)
+    // fprintf(stderr, outstr);
     redraw = 1;
     break;
   default:
@@ -5588,5 +5592,10 @@ void atomeyelib_set_title(int iw, char *title) {
   AXSetName (iw);
 }
 
+void atomeyelib_wait(int iw) {
+  while (atomeyelib_n_events[iw] != 0) {
+    usleep(100);
+  }
+}
 
 #endif
