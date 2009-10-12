@@ -5387,9 +5387,6 @@ bool atomeyelib_treatevent(int iw) {
   pthread_mutex_lock(&global_lock);
 
   qhead = atomeyelib_q_head[iw];
-  atomeyelib_n_events[iw]--;
-  atomeyelib_q_head[iw]++;
-  if (atomeyelib_q_head[iw] == ATOMEYELIB_MAX_EVENTS) atomeyelib_q_head[iw] = 0;
 
   pthread_mutex_unlock(&global_lock);
 
@@ -5417,6 +5414,14 @@ bool atomeyelib_treatevent(int iw) {
   default:
     pe("atomeyelib_treatevent: iw=%d bad event type %d\n", iw, atomeyelib_events[iw][qhead].event);
   }
+
+  pthread_mutex_lock(&global_lock);
+
+  atomeyelib_n_events[iw]--;
+  atomeyelib_q_head[iw]++;
+  if (atomeyelib_q_head[iw] == ATOMEYELIB_MAX_EVENTS) atomeyelib_q_head[iw] = 0;
+
+  pthread_mutex_unlock(&global_lock);
 
 
   //  printf("atomeyelib_treatevent returning %d\n", redraw);
