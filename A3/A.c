@@ -1052,6 +1052,10 @@ int main (int argc, char *argv[])
     else
         N->small_cell_err_handler =
 	  NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+
+    N->small_cell_err_handler =
+      NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+    
     /* the PDB does have CRYST1 tag but still overflows, the */
     /* above still happens. Only when there is CRYST1 tag    */
     /* and all atoms are rigorously inside the orthogonal    */

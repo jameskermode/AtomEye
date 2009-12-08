@@ -2826,7 +2826,8 @@ static bool proc_load_config(int iw, char *instr, char **outstr)
     else
         N->s_overflow_err_handler =
             NEIGHBORLIST_S_OVERFLOW_ERR_HANDLER_BOUNDING_BOX;
-    N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
+    //N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
+    N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
     for (i=0; i<ct->t; i++)
         for (j=i; j<ct->t; j++)
             for (k=0; k<rcut_patch_top; k++)
@@ -5212,6 +5213,10 @@ int atomeyelib_init(int argc, char *argv[], void *data)
     else
         N->small_cell_err_handler =
 	  NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+
+    N->small_cell_err_handler =
+      NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+
     /* the PDB does have CRYST1 tag but still overflows, the */
     /* above still happens. Only when there is CRYST1 tag    */
     /* and all atoms are rigorously inside the orthogonal    */
@@ -5502,7 +5507,8 @@ int atomeyelib_load_libatoms(int iw, Atoms *atoms, char *title, char **outstr)
     Neighborlist_Recreate_Form (Config_Aapp_to_Alib, ct, N);
     N->s_overflow_err_handler =
       NEIGHBORLIST_S_OVERFLOW_ERR_HANDLER_FOLD_INTO_PBC;
-    N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
+    //N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
+    N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
     for (i=0; i<ct->t; i++)
         for (j=i; j<ct->t; j++)
             for (k=0; k<rcut_patch_top; k++)
