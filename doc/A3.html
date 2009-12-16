@@ -1,0 +1,577 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+
+<head>
+<title>AtomEye 3</title>
+<meta http-equiv="Content-Type" content="text/html; charset=us-ascii" />
+<link rel="stylesheet" type="text/css" media="screen" href="A3.css" />
+</head>
+
+<body>
+<h1>AtomEye 3: atomistic configuration viewer</h1>
+
+<p align="right">
+<a class="box" href="#commands">Commands</a>
+<a class="box" href="#download">Download</a>
+</p>
+
+<h2>Features</h2>
+In addition to
+<a href="http://alum.mit.edu/www/liju99/Graphics/A/">AtomEye 2</a>;
+<ul>
+ <li><a href="#scripting">scripting interface</a></li>
+ <li><a href="#keybinding">reconfigurable keybinding</a></li>
+ <li><a href="#parallel">parallel computing</a></li>
+</ul>
+
+<h2>Manual</h2>
+
+<h3>usage</h3>
+<dl>
+<dt>command line</dt>
+<dd><tt>./A [options] [config_filename]</tt></dd>
+<dt>startup script file</dt>
+<dd>When AtomEye3 is stared, it searches your home directory
+    for a file named .A and executes the commands in the file.</dd>
+<dt>options</dt>
+<dd><table>
+<tr>
+ <th>option</th>
+ <th>description</th>
+</tr>
+<tr>
+ <td><tt>-v2</tt></td>
+ <td>behave as compatible with version 2</td>
+</tr>
+<tr>
+ <td><tt>-xterm[=<i>"xterm-command and options"</i>]</tt></td>
+ <td>run in a new x-terminal (like as version 2)</td>
+</tr>
+<tr>
+ <td><tt>-f=<i>script_filename</i></tt></td>
+ <td>load a script file</td>
+</tr>
+<tr>
+ <td><tt>-nofep</tt></td>
+ <td>disable front-end-processor (readline functions)</td>
+</tr>
+<tr>
+ <td><tt>-nowindow</tt></td>
+ <td>disable viewport window</td>
+</tr>
+<tr>
+ <td><tt>-display <i>display</i></tt></td>
+ <td>specify the display to use</td>
+</tr>
+<tr>
+ <td><tt>-geometry <i>WIDTH[xHEIGHT]</i></tt></td>
+ <td>define the initial window geometry (size only)</td>
+</tr>
+<tr>
+ <td><tt>-listen[=<i>port</i>]</tt></td>
+ <td>listen a port for socket communication</td>
+</tr>
+<tr>
+ <td><tt>-connect[=[<i>host</i>:]<i>port</i>]</tt></td>
+ <td>terminal mode (with front-end-processor)</td>
+</tr>
+</table></dd>
+<dt>socket communication</dt>
+<dd>When AtomEye3 is stared with <tt>-listen</tt> option,
+it behave as a TCP/IP server.
+It can be accessed by <tt>"./A -connect[=[<i>host</i>:]<i>port</i>]"</tt>
+as well as <tt>"telnet <i>host port</i>"</tt>.
+Default host name and port number are <i>localhost</i> and <i>21040</i>,
+respectively.
+</dd>
+</dl>
+
+<a name="scripting" id="scripting" />
+<h3>scripting interface and keybinding</h3>
+<dl>
+
+<a name="quit" id="quit" />
+<dt>closing viewport window / quit</dt>
+<dd>
+ <tt>close</tt><br />
+     ... close the current viewport window<br />
+ <tt>quit</tt><br />
+     ... terminate AtomEye3
+</dd>
+
+<a name="end" id="end" />
+<dt>disconnecting terminal / end of file</dt>
+<dd>
+ <tt>disconnect</tt><br />
+ <tt>end</tt>
+</dd>
+
+<a name="load" id="load" />
+<dt>loading commands from a file</dt>
+<dd>
+ <tt>load [<i>filename</i>]</tt><br />
+ ... default filename is <i>scr_cmds</i>.
+</dd>
+
+<a name="save" id="save" />
+<dt>saving AtomEye's internal parameters to a file</dt>
+<dd>
+ <tt>save [<i>filename</i>]</tt><br />
+ <tt>save <i>filename</i> key</tt><br />
+ <tt>save <i>filename</i> both</tt><br />
+ ... default filename is <i>scr_cmds</i>.
+</dd>
+
+<a name="key" id="key" />
+<dt>sending keybord command</dt>
+<dd>
+ <tt>key <i>Down</i></tt><br />
+ ... default keybinding for <span class="box">Down</span> is rotate_0_inc.
+</dd>
+
+<a name="set" id="set" />
+<a name="keybinding" id="keybinding" />
+<dt>changing keybindkings</dt>
+<dd>
+ <tt>set key-&gt;<i>Down rotate_0_inc</i></tt><br />
+ <tt>set key-&gt;<i>Down+S rotate_2_dec</i></tt><br />
+ <tt>set key-&gt;<i>Down+CS translate_2_dec</i></tt><br />
+ ... keyname is
+ <tt>KeySym</tt>+(<tt>S</tt>:Shift, <tt>C</tt>:Ctrl, <tt>M</tt>:Meta/Lock)
+</dd>
+
+<a name="redraw" id="redraw" />
+<dt>changing AtomEye's state parameters and redrawing</dt>
+<dd>
+ <tt>set n-&gt;bgcolor <i>0.5 0.5 0.5</i></tt><br />
+ <tt>redraw</tt><br />
+ <table>
+ <tr><th>parameters</th><th>value(s)</th><th>description</th></tr>
+ <tr><td><tt>n-&gt;bgcolor</tt></td><td><i>r g b</i></td>
+     <td>background</td></tr>
+ <tr><td><tt>n-&gt;anchor</tt></td><td><i>i</i></td>
+     <td><i>-1</i>: <tt>n-&gt;hook[]</tt> as anchor,
+         <i>&gt;=0</i>: certain atom</td></tr>
+ <tr><td><tt>n-&gt;hook</tt></td><td><i>s0 s1 s2</i></td>
+     <td>real space coordinates</td></tr>
+ <tr><td><tt>n-&gt;delta</tt></td><td><i>delta</i></td>
+     <td>rate of change (gear-box)</td></tr>
+ <tr><td><tt>n-&gt;mgs_radius</tt></td><td><i>d</i></td>
+     <td>magic sphere for pointer rotation</td></tr>
+ <tr><td><tt>n-&gt;atom_r_ratio</tt></td><td><i>d</i></td>
+     <td>compared to <tt>ATOM_RADIUS</tt></td></tr>
+ <tr><td><tt>n-&gt;color_mode</tt></td><td><i>i</i></td>
+     <td><tt>NORMAL</tt>(<i>1</i>), <tt>COORD</tt>(<i>2</i>),
+         <tt>AUXILIARY</tt>(<i>3</i>) or <tt>SCRATCH</tt>(<i>4</i>)</td></tr>
+ <tr><td><tt>n-&gt;wireframe_mode</tt></td><td><i>i</i></td>
+     <td>draw H-box</td></tr>
+ <tr><td><tt>n-&gt;bond_mode</tt></td><td><i>l</i></td>
+     <td>draw bonds</td></tr>
+ <tr><td><tt>n-&gt;bond_radius</tt></td><td><i>d</i></td>
+     <td>in Angstrom</td></tr>
+ <tr><td><tt>n-&gt;shell_viewer_mode</tt></td><td><i>l</i></td>
+     <td>xv and ghostview</td></tr>
+ <tr><td><tt>n-&gt;xtal_mode</tt></td><td><i>l</i></td><td></td></tr>
+ <tr><td><tt>n-&gt;xtal_origin</tt></td><td><i>s0 s1 s2</i></td>
+     <td>shifted xtal origin</td></tr>
+ <tr><td><tt>n-&gt;auxiliary_idx</tt></td><td><i>i</i></td><td></td></tr>
+ <tr><td><tt>n-&gt;auxiliary_cmap</tt></td><td><i>i</i></td>
+     <td>which colormap should we use</td></tr>
+ <tr><td><tt>n-&gt;auxiliary_threshold[0..33]</tt></td><td><i>d0 d1</i></td>
+     <td>lower/upper value</td></tr>
+ <tr><td><tt>n-&gt;auxiliary_thresholds_saturation</tt></td><td><i>l</i></td>
+     <td><i>0</i>: invisible if outside thresholds</td></tr>
+ <tr><td><tt>n-&gt;auxiliary_thresholds_rigid</tt></td><td><i>l</i></td>
+     <td><i>0</i>: floating thresholds</td></tr>
+ <tr><td><tt>n-&gt;parallel_projection</tt></td><td><i>l</i></td>
+     <td>parallel / perspective projections</td></tr>
+ <tr><td><tt>n-&gt;glob_advance</tt></td><td><i>i</i></td>
+     <td>how fast the file list advances</td></tr>
+ <tr><td><tt>n-&gt;fp[0..15].wireframe_mode</tt></td><td><i>i</i></td>
+     <td></td></tr>
+ <tr><td><tt>n-&gt;fp[0..15].s0</tt></td><td><i>s0 s1 s2</i></td>
+     <td></td></tr>
+ <tr><td><tt>n-&gt;fp[0..15].dx_input</tt></td><td><i>d0 d1 d2 d3</i></td>
+     <td></td></tr>
+ <tr><td><tt>n-&gt;fp[0..15].dx_cache</tt></td><td><i>d0 d1 d2 d3</i></td>
+     <td></td></tr>
+ <tr><td><tt>AX_3D-&gt;x</tt></td><td><i>s0 s1 s2</i></td>
+     <td>coordinates of the viewpoint</td></tr>
+ <tr><td><tt>AX_3D-&gt;k</tt></td><td><i>d</i></td>
+     <td>conversion factor from radian to window pixels</td></tr>
+ <tr><td><tt>AX_3D-&gt;V[0..2]</tt></td><td><i>d0 d1 d2</i></td>
+     <td><tt>AX_3D-&gt;V[i]</tt> is the normalized ith axis of viewport</td>
+     </tr>
+ <tr><td><tt>AX_3D-&gt;zcut</tt></td><td><i>d</i></td>
+     <td><i>(0,zcut]</i> of the view frustum</td></tr>
+ <tr><td><tt>AX_3D-&gt;wx</tt></td><td><i>d</i></td>
+     <td>viewpoint coordinates in window frame (pixels)</td></tr>
+ <tr><td><tt>AX_3D-&gt;wy</tt></td><td><i>d</i></td><td></td></tr>
+ <tr><td><tt>AX_3D-&gt;fp[i].d0</tt></td><td><i>d</i></td><td></td></tr>
+ <tr><td><tt>AX_3D-&gt;fp[i].dx</tt></td><td><i>s0 s1 s2</i></td><td></td></tr>
+ <tr><td><tt>CC[0..24]</tt></td><td><i>r g b</i></td>
+     <td>atom coordination color</td></tr>
+ </table>
+</dd>
+
+
+<a name="commands" id="commands" />
+<dt>commands and default keybindings</dt>
+<dd><table>
+<tr><th>command</th><th>default keybinding</th></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#pull_closer_away">
+advance</a> <i>delta</i></td><td></td></tr>
+<tr><td class="sp">advance_dec</td><td>Page_Up+M</td></tr>
+<tr><td class="sp">advance_inc</td><td>Page_Down+M</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#auxiliary_property_coloring">
+aux_property_coloring</a> <i>n</i></td><td></td></tr>
+<tr><td class="sp">aux_property_coloring_0..15</td><td>[0-9,a-f]+M</td></tr>
+<tr><td class="sp">aux_property_coloring_16..19</td><td>[g-j]+C</td></tr>
+<tr><td class="sp">aux_property_coloring_20..29</td><td>[0-9]+C</td></tr>
+<tr><td class="sp">aux_property_coloring_30..31</td><td>[k-l]+C</td></tr>
+<tr><td>capture <i>imageformat filename [resolution]</i></td><td></td></tr>
+<tr><td class="sp"><a
+ href="http://164.107.79.177/Archive/Graphics/A/#making_eps">
+capture_eps</a> <i>filename [resolution]</i></td><td>e</td></tr>
+<tr><td class="sp"><a
+ href="http://164.107.79.177/Archive/Graphics/A/#making_jpg">
+capture_jpg</a> <i>filename [resolution]</i></td><td>j</td></tr>
+<tr><td class="sp"><a
+ href="http://164.107.79.177/Archive/Graphics/A/#making_png">
+capture_png</a> <i>filename [resolution]</i></td><td>p</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#central_symm_coloring">
+central_symmetry_coloring</a></td><td>h+M</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#scale_atom_radii">
+change_atom_r_ratio</a> <i>delta</i></td><td></td></tr>
+<tr><td class="sp">change_atom_r_ratio_dec</td><td>Page_Down</td></tr>
+<tr><td class="sp">change_atom_r_ratio_inc</td><td>Page_Up</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#auxiliary_property_coloring">
+change_aux_colormap</a> <i>n</i></td><td></td></tr>
+<tr><td class="sp">change_aux_colormap_prev</td><td>minus+M</td></tr>
+<tr><td class="sp">change_aux_colormap_next</td><td>equal+M</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#auxiliary_property_coloring">
+change_aux_property_threshold</a> <i>lower|upper delta</i></td><td></td></tr>
+<tr><td class="sp">change_aux_property_threshold_lower_dec</td>
+    <td>Page_Down+C</td></tr>
+<tr><td class="sp">change_aux_property_threshold_lower_inc</td>
+    <td>Page_Up+C</td></tr>
+<tr><td class="sp">change_aux_property_threshold_upper_dec</td>
+    <td>Page_Down+S</td></tr>
+<tr><td class="sp">change_aux_property_threshold_upper_inc</td>
+    <td>Page_Up+S</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#change_bgcolor">
+change_bgcolor</a> <i>r g b</i></td><td>d</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#change_bond_color_radius">
+change_bond_color</a> <i>r g b R</i></td><td></td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#change_bond_radius">
+change_bond_radius</a> <i>delta</i></td><td></td></tr>
+<tr><td class="sp">change_bond_radius_dec</td><td>End</td></tr>
+<tr><td class="sp">change_bond_radius_inc</td><td>Home</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#central_symm_coloring">
+change_central_symm_neighbormax</a></td><td>h+S</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#coordination_number_coloring">
+change_coordination_color</a> <i>N r g b</i></td><td></td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#cutting_planes">
+change_cutting_plane_wireframe_mode</a></td><td>i+S</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#change_atom_color_radius">
+change_normal_color</a> <i>Z r g b R</i></td><td></td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#shear_strain_coloring">
+change_shear_strain_subtract_mean</a></td><td>g+S</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#change_total_view_angle">
+change_view_angle_amplification</a> <i>delta</i></td><td></td></tr>
+<tr><td class="sp">change_view_angle_amplification_dec</td><td>End+S</td></tr>
+<tr><td class="sp">change_view_angle_amplification_inc</td><td>Home+S</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#toggle_wireframe_mode">
+change_wireframe_mode</a></td><td>i</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#new_clone_quit_viewport">
+clone</a></td><td>c</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#new_clone_quit_viewport">
+close / close_window</a></td><td>q</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#cutting_planes">
+cutting_plane</a> <i>n [dx dy dz s0 s1 s2]</i></td><td></td></tr>
+<tr><td class="sp">cutting_plane_[0-9,a-f] <i>[dx dy dz s0 s1 s2]</i></td>
+    <td>[0-9,a-f]+S</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#cutting_planes">
+delete_cutting_plane_[0-9,a-f]</a></td><td>[0-9,a-f]+MS</td></tr>
+<tr><td><a href="#end">
+disconnect / end</a></td><td></td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#find_atom"
+ name="find_atom" id="find_atom">
+find_atom</a> <i>n</i></td><td>f</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#cutting_planes">
+flip_cutting_plane</a></td><td>p+S</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#color_tiling">
+free_scratch</a></td><td>F2+C</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#least_square_strain_coloring"
+ name="ref_imprint" id="ref_imprint">
+isoatomic_reference_imprint</a></td><td>Esc</td></tr>
+<tr><td><a href="#key">
+key</a> <i>keysym</i></td><td></td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#extra_color_patch"
+ name="load_atom_color" id="load_atom_color">
+load_atom_color</a> <i>filename</i></td><td>F12</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#extra_color_patch"
+ name="load_aux" id="load_aux">
+load_aux</a> <i>filename</i></td><td>F11</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#load_new_config">
+load_config</a> <i>filename</i></td><td>F9</td></tr>
+<tr><td class="sp"><a
+ href="http://164.107.79.177/Archive/Graphics/A/#step_config">
+load_config_first</a></td><td>Insert+C</td></tr>
+<tr><td class="sp"><a
+ href="http://164.107.79.177/Archive/Graphics/A/#step_config">
+load_config_backward</a></td><td>Insert</td></tr>
+<tr><td class="sp"><a
+ href="http://164.107.79.177/Archive/Graphics/A/#step_config">
+load_config_forward</a></td><td>Delete</td></tr>
+<tr><td class="sp"><a
+ href="http://164.107.79.177/Archive/Graphics/A/#step_config">
+load_config_last</a></td><td>Delete+C</td></tr>
+<tr><td><a
+ href="#load">
+load_script</a> <i>filename</i></td><td>l+M</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#anchor_control">
+look_at_the_anchor</a></td><td>a</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#new_clone_quit_viewport"
+ name="new" id="new">new</a></td><td>n</td></tr>
+<!-- <tr><td>next</td><td></td></tr> -->
+<tr><td>normal_coloring</td><td>l</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#goto_position">
+observer_goto</a></td><td>g</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#auxiliary_property_coloring">
+original_normal_coloring</a></td><td>o</td></tr>
+<tr><td>pause <i>seconds</i></td><td></td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#inquire_geometrical_info">
+print_atom_info_pair</a></td><td>,</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#inquire_geometrical_info">
+print_atom_info_quartet</a></td><td>/</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#inquire_geometrical_info">
+print_atom_info_triplet</a></td><td>.</td></tr>
+<tr><td><a href="#quit">
+quit</a></td><td></td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#cutoff_control">
+rcut_patch</a>
+    <i> start sym sym | finish | dec/inc [delta]</i></td><td></td></tr>
+<tr><td class="sp">start_rcut_patch</td><td>r</td></tr>
+<tr><td class="sp">finish_rcut_patch</td><td>Return</td></tr>
+<tr><td class="sp">rcut_patch_dec, rcut_patch_inc</td>
+    <td>End+C, Home+C</td></tr>
+<tr><td><a href="#redraw">
+redraw</a></td><td></td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#reload_config">
+reload_config</a></td><td>F10</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#anchor_control">
+reset_anchor</a></td><td>w</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#auxiliary_property_coloring">
+reset_aux_property_thresholds</a></td><td>r+C</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#color_tiling">
+reset_scratch</a></td><td>F2</td></tr>
+<tr><td>reset_timer <i>[reset] [label]</i></td><td></td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#resize_window">
+resize</a> <i>width height</i></td><td></td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#rotate_object">
+rotate</a> <i>axis theta</i></td><td></td></tr>
+<tr><td class="sp">rotate_0_dec, rotate_0_inc</td><td>Up, Down</td></tr>
+<tr><td class="sp">rotate_1_dec, rotate_1_inc</td><td>Right, Left</td></tr>
+<tr><td class="sp">rotate_2_dec, rotate_2_inc</td><td>Down+S, Up+S</td></tr>
+<tr><td><a href="#save">
+save</a> <i>filename</i> [key|both]</td><td></td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#save_atom_indices"
+name="save_atom_indices"> save_atom_indices</a></td><td>; :</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#color_tiling"
+ name="scratch" id="scratch">
+scratch_coloring</a></td><td>F3</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#making_movie">
+script_animate</a> <i>[filename]</i></td><td>y</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#changing_gear">
+select_gear_[0-9]</a></td><td>[0-9]</td></tr>
+<tr><td><a href="#set">
+set</a> <i>name value</i></td><td></td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#shear_strain_coloring">
+shear_strain_coloring</a></td><td>g+M</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#cutting_planes">
+shift_cutting_plane</a> <i>delta</i></td><td></td></tr>
+<tr><td class="sp">shift_cutting_plane_dec</td><td>Left+S</td></tr>
+<tr><td class="sp">shift_cutting_plane_inc</td><td>Right+S</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#cutting_planes">
+shift_cutting_plane_to_anchor_[0-9,a-f]</a></td><td>[0-9,a-f]+CS</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#shift_object_under_PBC">
+shift_xtal</a> <i>axis delta</i></td><td></td></tr>
+<tr><td class="sp">shift_xtal_0_dec, shift_xtal_0_inc</td>
+    <td>Right+M, Left+M</td></tr>
+<tr><td class="sp">shift_xtal_1_dec, shift_xtal_1_inc</td>
+    <td>Down+M, Up+M</td></tr>
+<tr><td class="sp">shift_xtal_2_dec, shift_xtal_2_inc</td>
+    <td>Down+MS, Up+MS</td></tr>
+<tr><td>timer <i>[label]</i></td><td></td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#auxiliary_property_coloring">
+toggle_aux_property_thresholds_rigid</a></td><td>c+C</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#auxiliary_property_coloring">
+toggle_aux_property_thresholds_saturation</a></td><td>a+C</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#toggle_bond_mode">
+toggle_bond_mode</a></td><td>b</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#coordination_number_coloring">
+toggle_coordination_coloring</a></td><td>k</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#toggle_perspective">
+toggle_parallel_projection</a></td><td>Tab</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#cutoff_control">
+toggle_rcut</a>_patch_mode</td><td>r</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#toggle_viewer">
+toggle_shell_viewer_mode</a></td><td>v</td></tr>
+<tr><td>toggle_xtal_mode</td><td>x</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#shift_object">
+translate</a> <i>axis delta</i></td><td></td></tr>
+<tr><td class="sp">translate_0_dec, translate_0_inc</td>
+    <td>Left+C, Right+C</td></tr>
+<tr><td class="sp">translate_1_dec, translate_1_inc</td>
+    <td>Up+C, Down+C</td></tr>
+<tr><td class="sp">translate_2_dec, translate_2_inc</td>
+    <td>Down+CS, Up+CS</td></tr>
+<tr><td><a href="http://164.107.79.177/Archive/Graphics/A/#upright_viewframe">
+viewframe_upright</a></td><td>u</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#shift_object_under_PBC">
+xtal_origin_goto</a> <i>s0 s1 s2</i></td><td>t</td></tr>
+<tr><td><a
+ href="http://164.107.79.177/Archive/Graphics/A/#shift_object_under_PBC">
+xtal_origin_zero</a></td><td>z</td></tr>
+</table></dd>
+
+</dl>
+
+<a name="parallel" id="parallel" />
+<h3>Parallel Computing</h3>
+<p>Parallelization of AtomEye is based on spatial decomposition algorithm;
+the whole system cell is divided int sub-cells and each process is
+responsible for the calculation of atoms within the sub-cell.
+When the name of the executable file ends <tt>'p'</tt> character,
+AtomEye3 behaves as parallel program.
+<br /><span class="x">In some MPI environment (e.g. LAM), <tt>-mpi</tt> option
+might be used to change serial/parallel behavior of the program.</span>
+</p>
+<dl>
+<dt>running MPI programs</dt>
+ <dd><tt>
+  ln -s ./A ./Ap<br />
+  xterm [-display DISPLAY] -e mpirun -np 2 ./Ap [options] [config_filename]
+ </tt></dd>
+ <dd class="x"><tt>./A -mpi=2 [options] [config_filename]</tt></dd>
+<dt>MPI-related options</dt>
+ <dd><table>
+ <tr><th>option</th><th>description</th></tr>
+ <tr><td><tt>-decomp=<i>px,py,pz</i></tt></td>
+     <td>number of processes in a Cartesian grid</td></tr>
+ <tr class="x"><td><tt>-mpi=<i>"mpi-exec-command and options"</i></tt></td>
+     <td></td></tr>
+ <tr class="x"><td><tt>-mpi=<i>p</i></tt></td>
+     <td>an abbreviation for
+         <tt>-mpi="mpiexec -n <i>p</i>"</tt></td></tr>
+ </table></dd>
+<dt>distributed file I/O</dt>
+ <dd>If <tt>'%'</tt> character appears in config_file name, each process will
+     try to open the file which name is produced using printf(3)
+     with its process number (MPI-rank); e.g.<br />
+  <tt>ex_%d.cfg</tt>
+    -&gt; <tt>ex_0.cfg, ex_1.cfg, ... ex_10.cfg, ...</tt><br />
+  <tt>ex_%02d.cfg</tt>
+    -&gt; <tt>ex_00.cfg, ex_01.cfg, ... ex_10.cfg, ...</tt></dd>
+<dt>unimplemented functions</dt>
+ <dd>Functions listed blow are not implemented;
+ <ul><li><a href="#find_atom">find_atom</a></li>
+     <li><a href="#load_atom_color">load_atom_color</a></li>
+     <li><a href="#load_aux">load_aux</a></li>
+     <li><a href="#new">new</a></li>
+     <li><a href="#scratch">scratch_coloring</a></li>
+     <li><a href="#ref_imprint">isoatomic_reference_imprint</a></li>
+     <li><a href="#save_atom_indices">save_atom_indices</a></li>
+ </ul>
+ </dd>
+</dl>
+
+<a name="download" id="download" />
+<h2>Download (June 2 2006)</h2>
+<h3>source code</h3>
+<pre style="margin: 0em 0em 0em 2em">
+gzip -cd <a href="Src/Src-20060530.tar.gz">Src.tar.gz</a> | tar xf -
+cd Src
+cp -r A A3
+cd A3
+patch &lt; <a href="Patch/20060530-A3.20060602.patch">A3.patch</a>
+</pre>
+<h3>executables (binary)</h3>
+<ul>
+<li>i686 Linux
+ <a class="box" href="Binary/A3.i686-20060530">w/o MPI</a>
+ <a class="box" href="Binary/A3.i686-20060602-lam_7.0.6">lam-7.0.6</a>
+</li>
+<li>ia64 Linux
+ <a class="box" href="Binary/A3.ia64-20060602">w/o MPI</a>
+</li>
+<li>Mac OS X with <a href="http://www.apple.com/macosx/features/x11/">X11</a>
+ <a class="box" href="Binary/A3.Darwin-20060530">w/o MPI</a>
+ <a class="box" href="Binary/A3.Darwin-20060602-lam_7.1.1">lam-7.1.1</a>
+</li>
+<li>Windows with <a href="http://x.cygwin.com/">Cygwin/X11</a>
+ <a class="box" href="Binary/A3.Cygwin-20060530">w/o MPI</a>
+ <a class="box" href="Binary/A3.Cygwin-20060602-mpich2_1.0.3">mpich2-1.0.3</a>
+</li>
+</ul>
+
+</body>
+
+<hr>
+<ADDRESS>
+Email: 
+<a
+href=shimizu.futoshi@jaea.go.jp>shimizu.futoshi@jaea.go.jp</a>, 
+<a
+href="mailto:liju@seas.upenn.edu">liju@seas.upenn.edu</a>, 
+</ADDRESS>
+
+<a href="http://freelogs.com/stats/a/atomeye/" target="_top"><img
+border="0" alt="Free Web Counter"
+src="http://xyz.freelogs.com/counter/index.php?u=atomeye&s=fdg"
+ALIGN="middle" HSPACE="4" VSPACE="2"></a><script
+src=http://xyz.freelogs.com/counter/script.php?u=atomeye></script>
+<br><a style="font-size:12" href="http://freelogs.com/create.php"
+target="_top"><font style="font-size:12" color="#666666">Site
+Counter</font></a>
+
+</html>

@@ -1,0 +1,1538 @@
+<BODY bgcolor="#fffff7"
+text="#000000" link="#aa3333" vlink="#aa3333">
+
+<head>
+<title>AtomEye: atomistic configuration viewer</title>
+</head>
+
+<center>
+<h1>AtomEye: atomistic configuration viewer</h1> 
+
+<a href=gallery.html>Gallery</a> |
+<a href=#features>Features</a> |
+<a href=#formats>File formats</a> |
+<a href=#manual>Manual</a> |
+<a href=#download>Download</a> |
+<a href=utils.html>Utilities</a> |
+<a href=#FAQ>FAQ</a> |
+<a href=#bugreport>Bug report</a> |
+<a href=#history>History</a>
+
+<p>Really heavy users may try out the parallelized <a
+href=../A3/A3.html>version 3 beta</a>, with scripting capability.
+
+<p>AtomEye will always be free. Please <a
+href=http://scholar.google.com/scholar?cites=6489407935302268968>cite</a><br>
+<a href=Doc/Li03a.pdf>J. Li, <i>Modelling Simul. Mater. Sci. Eng.</i>
+<b>11</b> (2003) 173</a><br>
+if you use figures and movies produced by AtomEye, so your colleagues
+may know about this free tool. Thanks.
+
+</center>
+
+<hr>
+
+<a name=features>
+<h2>Features</h2>
+
+<UL>
+
+<LI> order-N in both execution time and memory used, where N is the
+number of atoms; designed for condensed-matter systems, no problem
+with >1 million atoms
+
+<LI> auto-detect 8, 16 and 32-bit shared memory or remote X-displays 
+
+<LI> multiple resizable windows in POSIX threads; 0% CPU usage if not moving 
+
+<LI> geometrically exact area-weighted antialiasing for atoms, bonds,
+and wireframes
+
+<LI> fast rendering of atoms by caching pixel- and z-maps in the main memory 
+
+<LI> quick toggle between parallel and perspective projections 
+
+<LI> full 3-D navigation 
+
+<LI> support periodic boundary conditions 
+
+<LI> support PDB input file format 
+
+<LI> support arbitrary-precision and extendable CFG input file format
+for large-scale, reloadable molecular dynamics simulations
+
+<LI> auto-decompress gzip- or bzip2-compressed input configuration files 
+
+<LI> JPEG, PNG and high-resolution EPS screenshots 
+
+<LI> customizable atom radii and coloring schemes 
+
+<LI> coordination number color-encoding with customizable cutoff radii
+and invisibility controls
+
+<LI> local atomic von Mises shear strain invariant color-encoding 
+
+<LI> user-defined property color-encoding, in hsv, jet, and other
+colormapping choices
+
+<LI> color-marking an initial configuration to track subsequent atomic
+displacements
+
+<LI> cooperative X-terminal input with GNU readline / history 
+
+<LI> up to 16 arbitrary cutting planes with advancing / rotation /
+flipping controls
+
+<LI> animation script for making movies
+</UL>
+
+<hr>
+
+<a name=formats>
+<h2>Configuration file formats</h2>
+
+<p>AtomEye works with atomistic configurations, the format of which
+should follow the general guidelines below from our 
+experience:
+<UL>
+ <LI> One file stores only one configuration.
+      <a href=http://neon.orch.ruhr-uni-bochum.de/progs/xmol.html>XMol</A>
+      XYZ's concatenated format is not recommended.
+ <LI> For portability, the file should be in ASCII plain text 
+      that a human can read.
+ <LI> There should <i>minimally</i> be chemical symbol designation 
+      for each atom and some representation for its position.
+ <LI> It is recommended to define comment line in the format,
+      and a configuration file should be self-explanatory 
+      with the aid of comments.
+</UL>
+
+<p>AtomEye currently supports the following formats: &nbsp;
+<a href=#PDB>PDB</a> | <a href=#standard_CFG>standard CFG</a> |
+<a href=#extended_CFG>extended CFG</a>
+
+<a name=compressed_config_file> <p>All configuration files can be
+compressed by <a href=http://www.gzip.org/>gzip</A> / <a
+href=http://sources.redhat.com/bzip2/>bzip2</A> and then fed directly
+into AtomEye, which looks for magic number at the first few bytes, and
+if found would automatically decompress it by calling shell
+gzip/bzip2. In order to use this feature, the user must install
+gzip/bzip2 executable in his shell PATH.
+
+<p><a href=#standard_CFG>Standard</A> or <a
+href=#extended_CFG>extended</A> CFG formats are <i>strongly</i>
+recommended over the <a href=#PDB>PDB</a> format for hassle-free
+rendering by AtomEye. Among other things, <a
+href=#standard_CFG>standard</A> or <a href=#extended_CFG>extended</A>
+CFG formats allow arbitrary numerical precision. Also, enforcing PBC
+is quite a bit of work for the <a href=#PDB>PDB</a> format, but is
+built-in in <a href=#standard_CFG>standard</A> or <a
+href=#extended_CFG>extended</A> CFG formats.
+
+<p><a name=PDB> <h4><a href=http://www.rcsb.org/pdb/>Protein Data
+Bank</A> format</h4>
+
+This format is widely used for storing atomic structure. Its
+specifications can be found <a
+href=http://www.rcsb.org/pdb/docs/format/pdbguide2.2/guide2.2_frame.html>
+here</A>. The standard renderer of PDB file is <a
+href=http://www.bernstein-plus-sons.com/software/rasmol/>Rasmol</A>.
+
+<p>PDB examples: &nbsp;&nbsp;
+<a href=Gallery/DNA/DNA.pdb>DNA.pdb</A> | 
+<a href=Gallery/Nanotube/Nanotube8x3x1.pdb>Nanotube8x3x1.pdb</A> |
+<a href=Gallery/SiShuffle/SiShuffle.pdb>SiShuffle.pdb</A>
+
+<p>In order to enforce periodic boundary condition (PBC) behavior in
+AtomEye, one must insert the following two lines at the beginning of
+the file:
+
+<pre>
+HEADER  500 MUST_PBC
+CRYST1   13.303   37.627    7.681  60.00  70.00  80.00 P 1           1
+</pre>
+
+in which the first line is a secret code that stays; the
+second line contains six numbers,
+<UL>
+ <LI> <i>a=13.303</i>:&nbsp; the length of the 
+      first box edge in Angstrom
+ <LI> <i>b=37.627</i>:&nbsp; the length of the 
+      second box edge in Angstrom
+ <LI> <i>c=7.681</i>:&nbsp; the length of the 
+      third box edge in Angstrom
+ <LI> <i>alpha=60.00</i>:&nbsp; the angle 
+      between the second and third box edges in degrees
+ <LI> <i>beta=70.00</i>:&nbsp; the angle 
+      between the first and third box edges in degrees
+ <LI> <i>gamma=80.00</i>:&nbsp; the angle 
+      between the first and second box edges in degrees
+</UL>
+which should be modified accordingly. The box edges are taken to be
+<i>h1=(u1,0,0)</i>, <i>h2=(u2,u3,0)</i>, <i>h3=(u4,u5,u6)</i> in
+Cartesian coordinates, with <i>u1,u2,u3,u4,u5,u6</i> having one to one
+correspondence with <i>a,b,c,alpha,beta,gamma</i>. This connection is
+important because the atom positions will be specified in Cartesian
+coordinates, so one must unequivocally specify the three PBC edges in
+Cartesian coordinates too, fixing the rotational degrees of freedom.
+
+<p>A configuration file is considered to be in PDB format if there is
+'.pdb' or '.PDB' in the filename.
+
+<a name=standard_CFG>
+<h4>Standard CFG format</h4>
+
+<p>The standard CFG format ensures seamless transition and
+<i>complete</i> information passage from one MD simulation to the
+other. Thus particle velocities <i>must</i> be specified, and
+floating-point numbers are usually saved to the 16th significant
+digit. Aside from an atom's position and velocity, properties such as
+the local energy are deemed potential-dependent and therefore cannot
+be specified in the standard format.
+
+<p>The shortcoming of the standard CFG format is its lack of
+extensibility, and the filesize tends to be noticeably larger for very
+large configurations (>200K atoms).
+
+<p>Standard CFG examples: &nbsp;&nbsp;
+<a href=Gallery/SiVacancy/SiVacancy.cfg>SiVacancy.cfg</A> |
+<a href=Gallery/Si_screw_dipole/Si_screw_dipole.cfg>Si_screw_dipole.cfg</A> | 
+<a href=Gallery/Cu_NanoXtal/Cu_NanoXtal.cfg.bz2>Cu_NanoXtal.cfg.bz2</a>
+
+<p>Take a look at <a
+href=Gallery/SiVacancy/SiVacancy.cfg>SiVacancy.cfg</A>. The format
+consists of system specifications and atom specifications. The system
+specifications are of the form 'tagname = value units', where
+'tagname' and 'units' are fixed, and 'value' needs to be filled
+in. Some tagnames are <i>required</i>, such as 'Number of particles',
+'H0(1,1)' to 'H0(3,3)'. Some are optional, such as 'A', 'eta(1,1)',
+'R'. A line starting with '#' is comment. Here the comments explain
+the tags immediately above, which is a good habit.
+
+<a name=standard_CFG_example>
+<pre>
+Number of particles = 1727
+# (required) this must be the first line
+</pre>
+
+<pre>
+A = 1.0 Angstrom (basic length-scale)
+# (optional) basic length-scale: default A = 1.0 [Angstrom]
+</pre>
+
+<pre>
+H0(1,1) = 32.5856986704313 A
+H0(1,2) = 0 A
+H0(1,3) = 0 A
+# (required) this is the supercell's 1st edge, in A
+
+H0(2,1) = 8.64689152483509e-16 A
+H0(2,2) = 32.5856986704313 A
+H0(2,3) = 0 A
+# (required) this is the supercell's 2nd edge, in A
+
+H0(3,1) = 8.64689152483509e-16 A
+H0(3,2) = 8.64689152483509e-16 A
+H0(3,3) = 32.5856986704313 A
+# (required) this is the supercell's 3rd edge, in A
+</pre>
+
+<pre>
+Transform(1,1) = 1
+Transform(1,2) = 0
+Transform(1,3) = 0
+Transform(2,1) = 0
+Transform(2,2) = 1
+Transform(2,3) = 0
+Transform(3,1) = 0
+Transform(3,2) = 0
+Transform(3,3) = 1
+# (optional) apply additional transformation on H0:  H = H0 * Transform;
+# default = Identity matrix.
+
+eta(1,1) = 0
+eta(1,2) = 0
+eta(1,3) = 0
+eta(2,2) = 0
+eta(2,3) = 0
+eta(3,3) = 0
+# (optional) apply additional Lagrangian strain on H0:
+# H = H0 * sqrt(Identity_matrix + 2 * eta);
+# default = zero matrix.
+</pre>
+
+<pre>
+# ENSUING ARE THE ATOMS, EACH ATOM DESCRIBED BY A ROW
+# 1st entry is atomic mass in a.m.u.
+# 2nd entry is the chemical symbol (max 2 chars)
+
+# 3rd entry is reduced coordinate s1 (dimensionless)
+# 4th entry is reduced coordinate s2 (dimensionless)
+# 5th entry is reduced coordinate s3 (dimensionless)
+# real coordinates x = s * H,  x, s are 1x3 row vectors
+
+# 6th entry is d(s1)/dt in basic rate-scale R
+# 7th entry is d(s2)/dt in basic rate-scale R
+# 8th entry is d(s3)/dt in basic rate-scale R
+R = 1.0 [ns^-1]
+# (optional) basic rate-scale: default R = 1.0 [ns^-1]
+</pre>
+
+<pre>
+28.0855 Si .0208333333333333 .0208333333333333 .0208333333333333 0 0 0
+28.0855 Si .0625 .0625 .0625 0 0 0
+28.0855 Si .0208333333333333 .104166666666667 .104166666666667 0 0 0
+28.0855 Si .0625 .145833333333333 .145833333333333 0 0 0
+28.0855 Si .104166666666667 .0208333333333333 .104166666666667 0 0 0
+28.0855 Si .145833333333333 .0625 .145833333333333 0 0 0
+....
+</pre>
+
+<p>The atom specifications are the rows above, one row for each atom,
+with the meaning of each column entry explained in the comments. The
+reduced coordinates s1,s2,s3 should be between 0 and 1, or between
+-0.5 and 0.5. The Cartesian coordinates of the atoms can be determined
+from the reduced coordinates as,
+
+<pre>
+ x  =  s1 * H(1,1)  +  s2 * H(2,1)  +  s3 * H(3,1)
+ y  =  s1 * H(1,2)  +  s2 * H(2,2)  +  s3 * H(3,2)
+ z  =  s1 * H(1,3)  +  s2 * H(2,3)  +  s3 * H(3,3)
+</pre>
+
+<p>'A', 'R' are the lengthscale and ratescale of H0[][] and ds[]/dt,
+respectively, which by default take the values Angstrom and
+nanosecond^-1. They can be altered to manually dilate or heat up the
+system. 'eta[][]' is the optional Lagrangian strain which is 0 by
+default, using which we can apply an additional deformation on H0[][]
+to get the actual box shape H[][]. These are amenities that
+entry-level users can do without.
+
+
+<a name=extended_CFG>
+<h4>Extended CFG format</h4>
+
+<p>Extended CFG examples: &nbsp;&nbsp;
+<a href=Gallery/BubbleRaft/BubbleRaftBefore.cfg>BubbleRaftBefore.cfg</A> |
+<a href=Gallery/BubbleRaft/BubbleRaftAfter1.cfg>BubbleRaftAfter1.cfg</A>
+
+<p>Extended CFG format addresses the problem of filesize and
+extensibility. Velocity data is no longer required for the atoms, and
+floating-point precision can be what one sees fit for the application
+instead of the recommended 16 significant digits in case of the
+standard CFG format. Also, atomic mass and chemical symbol are now
+assigned on a block-by-block basis instead of on an atom-by-atom
+basis. All standard CFG system tags are still valid in the extended
+CFG format, with addition of the 'entry_count' keyword, whose
+appearance determines whether this is standard or extended CFG format.
+
+<pre>
+Number of particles = 16200
+A = 4.37576470588235 Angstrom (basic length-scale)
+H0(1,1) = 127.5 A
+H0(1,2) = 0 A
+H0(1,3) = 0 A
+H0(2,1) = 0 A
+H0(2,2) = 119.501132067411 A
+H0(2,3) = 0 A
+H0(3,1) = 0 A
+H0(3,2) = 0 A
+H0(3,3) = 3 A
+.NO_VELOCITY.
+entry_count = 11
+auxiliary[0] = kine [reduced unit]
+auxiliary[1] = pote [reduced unit]
+auxiliary[2] = s11 [reduced unit]
+auxiliary[3] = s22 [reduced unit]
+auxiliary[4] = s12 [reduced unit]
+auxiliary[5] = hydro [reduced unit]
+auxiliary[6] = mises [reduced unit]
+auxiliary[7] = Lmin [reduced unit]
+1.000000
+Ar
+0.005 0.01232 0.5 0 -2.9819 0.79705 2.3326 0.022255 1.5648 0.76808 102.82
+....
+</pre>
+
+<p>In above, 'entry_count = 11' means there are 11 entries per row for
+an atom. To omit velocity data in rows, write '.NO_VELOCITY.' line
+before the 'entry_count = 11' line. In this case because 11=3+8, we
+must have 8 so-called <i>auxiliary properties</i> per atom. If on the
+other hand '.NO_VELOCITY.' does not appear before 'entry_count = 11',
+then the velocities (ds[]/dt in R) will be specified after s[] in each
+row, and since 11=3+3+5, we will have only 5 auxiliary properties.
+
+<p>For AtomEye to know what these auxiliary properties are, so it can
+provide the correct help information, one should also fill in
+'auxiliary[i] = name [unitname]' lines, where 'i' runs from 0 to 8-1=7
+here, 'name' is a single word for the property's name, and unitname is
+the name of the unit in which the values are given. For example,
+'auxiliary[3] = mises [GPa]' would mean that the <i>fourth</i>
+auxiliary property, which is the 7th column (or the 10th column if
+'.NO_VELOCITY.' clause is not given), are the von Mises stress
+invariants in GPa.
+
+<p>Lastly, atomic mass and chemical symbol are now assigned on a
+block-by-block basis. In the above file <i>all</i> atoms would be
+1.000000 amu Ar, which is a pseudonym for soap bubble. Apparently this
+format can save considerable space for monoatomic configuration. When
+we have binary compounds, we can write,
+<pre>
+28.0855
+Si
+0.005 0.01232 0.5 0 -2.9819 0.79705 2.3326 0.022255 1.5648 0.76808 102.82
+12.011
+C
+0.091667 0.01232 0.5 0 -2.9491 1.3535 3.9801 0.9655 2.6668 1.63 103.07
+28.0855
+Si
+0.31833 0.01232 0.5 0 -2.9787 0.84615 2.4817 0.45222 1.6639 0.93449 103.02
+12.011
+C
+0.765 0.01232 0.5 0 -2.9431 1.4263 4.1825 -1.0568 2.8044 1.7367 102.97
+</pre>
+which takes up no more space than the standard CFG format under
+UNIX. Of course a space-saving way is to write the above as,
+<pre>
+28.0855
+Si
+0.005 0.01232 0.5 0 -2.9819 0.79705 2.3326 0.022255 1.5648 0.76808 102.82
+0.31833 0.01232 0.5 0 -2.9787 0.84615 2.4817 0.45222 1.6639 0.93449 103.02
+12.011
+C
+0.091667 0.01232 0.5 0 -2.9491 1.3535 3.9801 0.9655 2.6668 1.63 103.07
+0.765 0.01232 0.5 0 -2.9431 1.4263 4.1825 -1.0568 2.8044 1.7367 102.97
+</pre>
+
+<hr>
+
+<p>Sometime it is more convenient to have the auxiliary properties in
+a stand-alone '.aux' file, which can be patched to the current
+application on-demand (press 'F11'). This file should look like,
+
+<pre>
+102.54352   3.781
+-54.324521 -9.035 
+22.870594   0.785
+-9.8543543  6.834
+....
+</pre>
+
+where each line contains the property values for one atom, and the
+total number of lines is equal to the total number of atoms.  An
+example would be <a
+href=Gallery/Amorphous_Si/amorphous_Si.cfg>amorphous_Si.cfg</A>
+&nbsp;|&nbsp; <a
+href=Gallery/Amorphous_Si/amorphous_Si.aux>amorphous_Si.aux</A> file
+combination.  See <a href=#auxiliary_property_coloring>auxiliary
+property coloring</a> for how the coloring intensity is controlled.
+
+<hr>
+
+<a name=manual>
+<h2>Manual</h2>
+<center>
+<a href=#usage>usage</a> |
+<a href=#NumLock>NumLock</a> |
+<a href=#help_key>help key</a> |
+<a href=#rotate_object>rotate object</a> |
+<a href=#anchor_control>anchor control</a> |
+<a href=#toggle_bond_mode>toggle bond mode</a> |
+<a href=#toggle_perspective>toggle parallel / perspective projection</a> |
+<a href=#scale_atom_radii>scale atom radii</a> |
+<a href=#change_bond_radius>change bond radius</a> |
+<a href=#toggle_wireframe_mode>toggle wireframe mode</a> |
+<a href=#cutoff_control>cutoff control</a> |
+<a href=#upright_viewframe>upright viewframe</a> |
+<a href=#inquire_atom_info>inquire atom info</a> |
+<a href=#inquire_geometrical_info>inquire geometrical info</a> |
+<a href=#pull_closer_away>pull viewport closer/away from anchor</a> |
+<a href=#shift_object>shift object</a> |
+<a href=#changing_gear>changing gear</a> |
+<a href=#coordination_number_coloring>coordination number coloring</a> |
+<a href=#shear_strain_coloring>shear strain coloring</a> |
+<a href=#central_symm_coloring>central symmetry coloring</a> |
+<a href=#least_square_strain_coloring>least-square 
+atomic local strain coloring</a> |
+<a href=#auxiliary_property_coloring>auxiliary property coloring</a> |
+<a href=#extra_color_patch>extra patch file coloring</a> |
+<a href=#make_atoms_invisible>make atoms invisible</a> |
+<a href=#make_bond_invisible>make bond invisible</a> |
+<a href=#change_atom_color_radius>change atom color and/or radius</a> |
+<a href=#change_bond_color_radius>change bond color and/or radius</a> |
+<a href=#shift_object_under_PBC>shift object under PBC</a> |
+<a href=#change_bgcolor>change background color</a> |
+<a href=#change_total_view_angle>change view angle amplification</a> |
+<a href=#new_clone_quit_viewport>new / clone / quit viewport</a> |
+<a href=#system_status>print system status</a> |
+<a href=#find_atom>find atom</a> |
+<a href=#goto_position>goto position</a> |
+<a href=#resize_window>resize window</a> |
+<a href=#making_jpg>jpg screenshot</a> |
+<a href=#making_png>png screenshot</a> |
+<a href=#making_eps>eps screenshot</a> |
+<a href=#toggle_viewer>toggle auto shell viewer</a> |
+<a href=#load_new_config>load new config</a> |
+<a href=#reload_config>reload config</a> |
+<a href=#step_config>sequential config list browsing</a> |
+<a href=#color_tiling>define and trace color tiling blocks</a> |
+<a href=#cutting_planes>creating and manipulating cutting planes</a> |
+<a href=#save_atom_indices>save atom indices in a file</a> |
+<a href=#making_movie>making movie</a>
+</center>
+
+
+<a name=usage>
+<p>
+<h4>Usage:</h4>
+<a href=#download>Download</a> binary from browser and save as A
+<UL>
+ <LI> % chmod 755 A
+ <LI> % ./A filename
+</UL>
+
+You must ensure that the "xterm" command is in your shell PATH and can
+be directly called. See also <a href=#compressed_config_file>here</a>
+if your configuration file has been compressed.
+
+
+<a name=NumLock>
+<p>
+<h4>NumLock:</h4>
+
+In general, your NumLock key should be in the 'off' state. Otherwise,
+AtomEye will regard it as equivalent to having CapsLock 'on', which is
+equivalent to having <a href=#Meta>Meta</a>+ modifier for every key
+you press.
+
+
+<a name=help_key>
+<h4>Help Key:</h4>
+Press 'F1' or 'h' for help.
+
+
+<a name=rotate_object>
+<h4>Rotate Object (or so you think):</h4>
+
+<p>This can be accomplished either with arrow keys or mouse
+drag. Press Left, Right, Up, Down keys to rotate object as if you are
+rolling a crystal ball with the object embedded in it. For in-plane
+rotation, use Shift+Up (clockwise) and Shift+Down (counter-clockwise).
+The angle of rotation corresponding to one keystroke is controlled by
+the <a href=#changing_gear>gearbox value</a> multiplied by
+pi. Therefore, at gear-9 corresponding to gearbox value of 0.5, each
+keystroke will flip the object by pi/2, which comes in handy when
+viewing large configurations.
+
+<p>One can also rotate the viewport by pressing left button and drag
+the mouse. The "crystal ball" can be imagined as being hinged at the
+viewport center and whose diameter is somewhat smaller than the
+viewport.  If the pointer should fall onto the crystal ball's surface,
+the rotation follows a geodesic path connecting A and B on the ball's
+surface. On the other hand, if the pointer falls outside of the ball,
+then dragging the mouse will just rotate the object
+clockwise/counter-clockwise in-plane.
+
+<p>It can be foreseen that when the configuration is large, it is much
+more efficient to rotate the viewport than to rotate the object. In
+fact, contrary to what the heading suggests, this <i>is</i> how I
+implement the rotation. To get the correct look and feel, one must
+also <i>translate</i> the viewport after the rotation. It is done by
+the following rule: we stipulate that there exists a location in space
+whereby the combined effect of rotation and translation would not
+change its <i>subjective</i> position with respect to the
+viewport. This location is called the <i>anchor</i>, named so because
+when we "rotate the object", it appears to be hinging on the
+anchor. Please visit <a href=#anchor_control>anchor control</a> to see
+how to change the anchor position.
+
+
+<a name=anchor_control>
+<h4>Anchor Control:</h4>
+
+<p>At the start of a session, the anchor is taken to be the center of
+the box, so the object appears to be hinged at the box center if
+rotated. This state can be recovered whenever 'w' is pressed.
+
+<p>On the other hand, right-clicking on an atom transfers the anchor
+to that atom's position. This allows a streamlined right click + drag
+action that pulls the viewport closer to any atom you want to see in
+detail. Also, once you right-clicked on an atom, ensuing rotations
+will be hinged on that atom, which is convenient for studying local
+atomic arrangements.
+
+<p>If you are in the <a href=#toggle_bond_mode>bond mode</a>, then
+right-clicking on a bond will also set the anchor position to the bond
+center.
+
+<p>Press 'a' to shift the viewport so the anchor is seen right at the
+middle of the viewport.
+
+
+<a name=toggle_bond_mode>
+<h4>Toggle Bond Mode:</h4>
+
+<p>Press 'b' to toggle whether to draw bonds or not. To change
+the bonding cutoff between two species of atoms, visit
+<a href=#cutoff_control>Cutoff Control</a>.
+
+
+<a name=toggle_perspective>
+<h4>Toggle Between Parallel / Perspective Projection:</h4>
+
+<p>Press 'Tab' to toggle between parallel and perspective projection
+rendering methods.  Parallel projection is a limiting case of
+perspective projection, where the viewpoint is very far away from the
+object but the <a href=#change_total_view_angle>view angle</a> is also
+turned very small. It is useful for discerning atomic rows and planes.
+
+
+<a name=scale_atom_radii>
+<h4>Scale Atom Radii:</h4>
+
+<p>Press 'PageUp' to increase atom radii and 'PageDown' to decrease
+atom radii rendered on screen by a common factor. The rate of change
+is controlled by the <a href=#changing_gear>gearbox</a>.
+
+
+<a name=change_bond_radius>
+<h4>Change Bond Radius:</h4>
+
+<p>Press 'Home' to increase bond radius and 'End' to decrease bond radius
+drawn on the screen. The rate of change is controlled by the <a
+href=#changing_gear>gearbox</a>.
+
+
+<a name=toggle_wireframe_mode>
+<h4>Toggle Wireframe Mode:</h4>
+
+<p>Press 'i' to toggle wireframe mode that determines how to render
+the PBC box. You have the freedom to select no wireframe,
+monochromatic wireframe, RGB wireframe, and so on. In the case of the
+RGB wireframe, the three axes correspond to (s1,0,0), (0,s2,0),
+(0,0,s3), respectively; the point they meet corresponds to the origin
+(0,0,0).
+
+
+<a name=cutoff_control>
+<h4>Cutoff Control:</h4>
+
+<p>Press 'r' for cutoff control, which decides how close two atoms
+need to be with each other to be considered nearest neighbor (if they
+are, then each atom's coordination number will be increased by 1, and
+a bond will be drawn between them if under the bond mode).
+
+<p>You will be first inquired about which two species. For example, if
+you want to change the cutoff distance between silicon and carbon,
+then you should enter "Si C" and press enter. Then, with each
+Ctrl+Home/Ctrl+End, the cutoff distance will be increased/decreased;
+the rate of change is controlled by the <a
+href=#changing_gear>gearbox</a>. When you are satisfied, you should
+press 'r' again to close the change, so you can't modify two pairing
+types at the same time.
+
+
+<a name=upright_viewframe>
+<h4>Make Viewframe Upright:</h4>
+
+<p>Sometimes too much rotation is a bad thing, and you want the
+viewframe upright again just like at the beginning. Press 'u'.
+
+
+<a name=inquire_atom_info>
+<h4>Inquire Atom Information:</h4>
+
+<p>Right click on an atom to display relevant information about it in
+the xterm.  This will also set the <a href=#anchor_control>anchor</a>
+to this atom.
+
+<p>Right-clicking on a bond will display information about this
+bond. This will set the <a href=#anchor_control>anchor</a> to the bond
+center.
+
+
+<a name=inquire_geometrical_info>
+<h4>Inquire Geometrical Information:</h4>
+
+<p>AtomEye remembers the last four atoms that you have <a
+href=#inquire_atom_info>clicked on</a>.
+
+<UL> 
+
+<LI>Pressing ',' (comma) would print out the Cartesian separation and
+distance between the last two atoms clicked.
+
+<LI>Pressing '.' (period) would print out the bond angle between the
+last three atoms clicked.
+
+<LI>Pressing '/' (slash) would print out the dihedral angle between
+the last four atoms clicked.
+
+</UL>
+
+
+<a name=pull_closer_away>
+<h4>Pull Viewport Closer/Away from the Anchor:</h4>
+
+<p>Right click in the window and drag mouse to pull
+closer. Alternatively, use IMWheel (or Ctrl+IMWheel for quicker
+action) to pull viewport closer/away from the anchor. If you click on
+an atom, that atom will automatically become the <a
+href=#anchor_control>anchor</a>. If you click on a bond, the bond
+center will also become the <a href=#anchor_control>anchor</a>.
+
+
+<a name=shift_object>
+<h4>Shift Object (or so you think):</h4>
+
+<p>Ctrl+Left, Ctrl+Right, Ctrl+Up, Ctrl+Down will shift the object in
+plane. Ctrl+Shift+Up will send the object further from viewport,
+Ctrl+Shift+Down will pull it closer.
+
+
+<a name=changing_gear>
+<h4>Changing Gearbox Value:</h4>
+
+<p>Press numeral keys '0' to '9', and the gearbox value will be
+switched to,
+<pre>
+[1]0.001 [2]0.002 [3]0.005 [4]0.010 [5]0.020
+[6]0.050 [7]0.100 [8]0.200 [9]0.500 [0]0.150
+</pre>
+The gearbox value controls all rate of change, such as angle of
+rotation, amount of translation, the rate of atom radius change, etc.
+
+
+<a name=coordination_number_coloring>
+<h4>Coordination Number Coloring:</h4>
+
+<p>Press 'k' to toggle coordination number coloring. Coordination
+number is an empirical measure of how many nearest neighbors (could be
+of various species) there are for a particular atom. The definition of
+"nearest neighbors" can be changed by <a href=#cutoff_control>cutoff
+control</a>.
+
+<p>To clearly see defect cores, you often need to remove the perfectly
+coordinated atoms. This is done in <a href=#make_atoms_invisible>Make
+Atoms Invisible</a>.
+
+
+<a name=shear_strain_coloring>
+<h4>Atomistic Local von Mises Shear Strain Invariant Coloring:</h4>
+
+<p><a href=#Meta>Meta</a>+g will color-encode the atoms according to
+their <a href=Doc/vonMisesInvariant.pdf>local von Mises shear strain
+invariant</a>. Shift+g will toggle the flag controlling whether to
+subtract off the system-averaged strain tensor or not before computing
+the invariant; the default is no.  The controls of colormap,
+visibilities etc. are identical to that of <a
+href=#auxiliary_property_coloring>auxiliary properties coloring</a>.
+
+
+<a name=central_symm_coloring> <h4>Central Symmetry Parameter
+Coloring:</h4>
+
+<p><a href=#Meta>Meta</a>+h will color-encode the atoms according to
+their <a href=Doc/CentralSymmetry.pdf>central symmetry parameter</a>
+<i>c</i>'s. Shift+h will prompt the user to change the maximum number
+of neighbors <i>M</i> used in the computation; the default being the
+most popular coordination number of the configuration rounded
+even. The controls of colormap, visibilities etc. are identical to
+that of <a href=#auxiliary_property_coloring>auxiliary properties
+coloring</a>.
+
+<p>Because calculating the central symmetry parameters requires a <a
+href=Doc/neighborlist.pdf>neighborlist</a> without pairwise saving, it
+is not calculated by default when the configuration is loaded, but
+only computed after <a href=#Meta>Meta</a>+h is pressed.  <i>c</i> is
+between [0,1], and its average is usually less than 0.5 even for
+amorphous structures. An intrinsic stacking fault in FCC crystal would
+possess two layers of atoms with <i>c</i>'s at about 0.042, and a
+perfect crystal should have <i>c</i>'s less than 0.01 even with
+thermal fluctuations. So a recommended threshold value for visualizing
+planar faults is 0.01, which can be set by shifting the <a
+href=#changing_gear>gearbox</a> to level-4 and pressing Ctrl+PageUp
+once. Also, as <a href=#auxiliary_property_coloring>auxiliary
+properties coloring</a> explains, one needs to press 'Ctrl+T' to keep
+the above set thresholds for ensuing configurations.  See also <a
+href=#auxiliary_property_coloring>auxiliary properties coloring</a>
+for further controls.
+
+
+<a name=least_square_strain_coloring>
+<h4>Least-Square Atomic Local Strain Tensor Coloring:</h4>
+
+We have implemented <a href=annotate_atomic_strain/Doc/main.pdf>atomic
+local strain tensor</a> coloring as a core functionality of AtomEye
+(please cite F. Shimizu, S. Ogata and J. Li, "<a
+href=../../Papers/07/Shimizu07a.pdf>Theory of Shear Banding in
+Metallic Glasses and Molecular Dynamics Calculations</a>,"
+<em>Materials Transactions</em> <b>48</b> (2007) 2923-2927, if you use
+this characterization). It is different from the <a
+href=#shear_strain_coloring>von Mises shear strain invariant
+coloring</a> in that two configurations are required, one current, and
+one reference configuration.  It is also much more powerful and robust
+than the former because it does not rely on assumptions of prior high
+lattice symmetry.
+
+<p>To use, you need to load in a configuration first, and then press
+'Esc' key. This would
+<i>imprint</i> the present coordinates as the reference. Any
+configuration you <a href=#load_new_config>load</a> or <a
+href=#step_config>step</a> afterward would automatically trigger local
+strain calculations, the results of which are appended as <a
+href=#auxiliary_property_coloring>auxiliary
+properties</a>. Right-click on an atom to see the full local
+transformation matrix J, defined as
+<pre>
+ dx_{ij}(now)  \approx   dx_{ij}(reference) J
+</pre>
+where dx's are row vectors, and j are  i's <a
+href=#cutoff_control>nearest neighbors</a> (in the present
+configuration, as we don't want to store two neighborlists).
+
+<p>Note that for the results to be meaningful, the two configuration
+files must be <i>isoatomic</i>, meaning they must have the same set of
+atoms, with the same indexing (order). All that that may change
+between the two configurations are the <a href=#standard_CFG>H[][]
+matrix and s[] coordinates</a>.
+
+<p>This functionality is also spun off as a standalone utility called
+<a href=utils.html#annotate_atomic_strain>annotate_atomic_strain</a>.
+Please cite F. Shimizu, S. Ogata and J. Li, "<a
+href=../../Papers/07/Shimizu07a.pdf>Theory of Shear Banding in
+Metallic Glasses and Molecular Dynamics Calculations</a>,"
+<em>Materials Transactions</em> <b>48</b> (2007) 2923-2927, if you use
+this utility.
+
+
+<a name=auxiliary_property_coloring> <h4>Auxiliary Property
+Coloring:</h4>
+
+<p><a href=#Meta>Meta</a>+[0-9,a-f] will color-encode <a
+href=#extended_CFG>auxiliary properties</a> 0 to 15, whereas <a
+href=#Meta>Meta</a>+[0-9,a-f] with CapsLock ON will color-encode <a
+href=#extended_CFG>auxiliary properties</a> 16 to 31.  See <a
+href=Gallery/BubbleRaft/BubbleRaftBefore.cfg>BubbleRaftBefore.cfg</A>,
+<a
+href=Gallery/BubbleRaft/BubbleRaftBefore.jpg>BubbleRaftBefore.jpg</a>,
+<a
+href=Gallery/BubbleRaft/BubbleRaftAfter1.cfg>BubbleRaftAfter1.cfg</A>,
+<a
+href=Gallery/BubbleRaft/BubbleRaftAfter1.jpg>BubbleRaftAfter1.jpg</a>,
+<a
+href=Gallery/BubbleRaft/BubbleRaftAfter2.cfg>BubbleRaftAfter2.cfg</A>,
+<a
+href=Gallery/BubbleRaft/BubbleRaftAfter2.jpg>BubbleRaftAfter2.jpg</a>
+as examples of input (<a href=#extended_CFG>extended CFG format</a>)
+and output for auxiliary property coloring.
+
+<p>Press '<a href=#Meta>Meta</a>+-','<a href=#Meta>Meta</a>+=','<a
+href=#Meta>Meta</a>+M' to change the colormaps (available: <a
+href=CMAP/jet.jpg>jet</a>, <a href=CMAP/hot.jpg>hot</a>, <a
+href=CMAP/cool.jpg>cool</a>, <a href=CMAP/gray.jpg>gray</a>, <a
+href=CMAP/pink.jpg>pink</a>, <a href=CMAP/bone.jpg>bone</a>, <a
+href=CMAP/copper.jpg>copper</a>, <a href=CMAP/autumn.jpg>autumn</a>,
+<a href=CMAP/spring.jpg>spring</a>, <a
+href=CMAP/winter.jpg>winter</a>, <a href=CMAP/summer.jpg>summer</a>,
+<a href=CMAP/hsv.jpg>hsv</a>). Gradation in color only happens for
+atoms whose property values are between the lower threshold and the
+upper threshold (corresponding to colormap scales 0 and 1,
+respectively). Atoms whose property values are outside of the two
+thresholds will be rendered invisible by default. This default
+behavior can be toggled by pressing 'Ctrl+A', in which case those
+atoms whose property values are outside of the thresholds will be
+visible but drawn in saturated colors corresponding to colormap scales
+0 and 1.
+
+<p>Initially, the upper threshold is taken to be the maximum of the
+atoms' auxiliary property values and the lower threshold is taken to
+be the minimum. Shift+PageUp will increase the upper threshold,
+Shift+PageDown will decrease the upper threshold.  Ctrl+PageUp will
+increase the lower threshold, Ctrl+PageDown will decrease the lower
+threshold. This in turn controls which atoms are drawn and which atoms
+are invisible in the default mode. You may also use Shift+T to type in
+the thresholds manually.  If you wish to recover the initial threshold
+values, press 'Ctrl+R'.
+
+
+<p>When you <a href=#reload_config>reload a configuration</a> or <a
+href=#making_movie>make a movie</a> using <a
+href=#animation_script>animation script</a>, the default threshold
+behavior is "floating", meaning the program reestablishes the
+thresholds for every new config according to the new minimum and
+maximum. If you do not want this behavior, pressing 'Ctrl+T' will
+toggle to a mode whereby the thresholds remain fixed, or "rigid".
+
+<p>The coloring of atoms can be restored to normal values (of chemical
+species) with invisibilities removed by pressing 'o'.
+
+
+<p>If you make screenshot in <a href=#making_eps>eps</a> or <a
+href=#making_jpg>jpg</a> or <a href=#making_png>png</a>, there will an
+<a href=Gallery/BubbleRaft/BubbleRaftAfter2.jpg.cmap.eps>eps file</a>
+saved for the color scale, with numerical value labels.
+
+
+
+<a name=extra_color_patch>
+<h4>Apply Extra Color Patch:</h4>
+
+<p>One can assign arbitrary colors and radii to atoms and bonds by
+putting a '.usr' patch file with the same name in the same directory
+as the '.cfg' file.  See for example the file combination <a
+href=Gallery/Cu/Cu.cfg>Cu.cfg</A> &nbsp;|&nbsp; <a
+href=Gallery/Cu/Cu.usr>Cu.usr</A>.  This gives ultimate control of
+rendering spheres and cylinders to the user. This '.usr' file should
+consists of lines that contain either 1, 3, 4, 5, or 6 numbers.  The
+6-numbers line describes bonds, the rest describes atoms.
+
+<p>A 6-numbers line like
+<pre>
+0 3  0 1 0  0.2
+</pre>
+would mean drawing a bond between atom 0 and atom 3, with bond color
+"0 1 0" and radius 0.2.  Note that atom index in AtomEye
+starts from 0 as in C language
+convention (that is, the first atom in the cfg file has index 0).
+
+<p>A 5-numbers line like
+<pre>
+2  0 1 0  0.7
+</pre>
+would mean drawing atom 2 with  color "0 1 0" and radius 0.7
+
+<p>A 1-number line
+<pre>
+0.7
+</pre>
+or a 3-numbers line
+<pre>
+0 1 0
+</pre>
+or a 4-numbers line
+<pre>
+0 1 0  0.7
+</pre>
+would mean drawing atom <i>m</i> with radius 0.7 (with default color),
+color "0 1 0" (with default radius), or color "0 1 0" and radius 0.7,
+respectively. 
+<i>m</i> will be automatically accumulated, starting from 0.
+
+<p>The '.usr' patch file will be automatically loaded and applied when
+one presses <a href=#step_config>'Insert'/'Delete' to advance config
+list</a>. See <a href=Gallery/CuBond/>an example of a group of files
+here</A>.
+
+
+
+<a name=make_atoms_invisible>
+<h4>Make Atoms Invisible:</h4>
+
+<p> Ctrl+Shift+Right-click will make a certain species or coordination
+numbered atoms invisible.  Also, when prompted to enter atom color RGB
+(see <a href=#change_atom_color_radius>change atom color and/or
+radius</a>), '-1 0 0' will make it invisible.
+
+<p> When CapsLock is at On or <a href=#Meta>Meta</a> key is pressed,
+right-clicking on a particular atom will make it invisible.
+
+<p>The coloring of atoms can be restored to normal values (of chemical
+species) with invisibilities removed by pressing 'o'.
+
+
+<a name=make_bond_invisible>
+<h4>Make Bond Invisible:</h4>
+
+<p> When CapsLock is at On or <a href=#Meta>Meta</a> key is pressed,
+right-clicking on a particular bond will make it invisible.
+
+<p>The coloring of bonds can be restored to normal values with
+invisibilities removed by pressing 'o'.
+
+
+<a name=change_atom_color_radius>
+<h4>Change Atom Color and/or Radius:</h4>
+
+<p> Ctrl+Shift+Left-click will prompt the user to change the RGB color
+and/or radius of atoms of a certain chemical species, as follows:
+
+<pre>
+Change color [radius] of type-3 ("P") atoms (0.100 0.700 0.300 [1.060]):
+</pre>
+
+The first three numbers are the RGB values of <a
+href=http://www.webelements.com/webelements/elements/text/P/key.html>Phosphorus</a>.
+The last number in the square bracket is its radius (currently taken
+to be the <a
+href=http://www.fhi-berlin.mpg.de/th/balsac/balm.47.html>charge
+radius</a>, another alternative is the <a
+href=http://www.webelements.com/webelements/properties/text/definitions/atomic-radius-emp.html>empirical
+atomic radius</a>) in Angstrom. The rendered radius is the above
+scaled by a common factor (<a href=#scale_atom_radii>scale atom
+radii</a>).
+
+<p>If you press Return after being prompted, the values would remain
+identical and nothing happens. If you enter one number and Return, it
+will be interpreted as the new radius in Angstrom. If you enter three
+numbers and Return, it will be interpreted as the new color. Of
+course, you can enter all four numbers, in which case the first three
+numbers will be taken as the new color.
+
+<p>This <a
+href=http://alum.mit.edu/www/liju99/NetApp/JavaScript/Reader/rgb.html>link</a>
+may help you pick a new color. You may directly enter "255 250 250"
+instead of converting them to floating numbers ("1.0 0.98 0.98") first.
+
+<p>When CapsLock is at On or <a href=#Meta>Meta</a> key is pressed,
+left-clicking on a particular atom will prompt the user to change its
+RGB color and/or radius instead of the whole species.
+
+<p>The coloring of atoms can be restored to normal values (of chemical
+species) with invisibilities removed by pressing 'o'.
+
+
+<a name=change_bond_color_radius>
+<h4>Change Bond Color and/or Radius:</h4>
+
+<p> When CapsLock is at On or <a href=#Meta>Meta</a> key is pressed,
+left-clicking on a particular bond
+will prompt the user to change the RGB color
+and/or radius of the particular bond, as follows:
+
+<pre>
+Change color [radius] of bond-1726 (0.493 0.493 0.561 [0.250]):
+</pre>
+
+The first three numbers are the RGB values of the bond.  The last
+number in the square bracket is its radius in Angstrom.
+
+<p>If you press Return after being prompted, the values would remain
+identical and nothing happens. If you enter one number and Return, it
+will be interpreted as the new radius in Angstrom. If you enter three
+numbers and Return, it will be interpreted as the new color. Of
+course, you can enter all four numbers, in which case the first three
+numbers will be taken as the new color.
+
+<p>This <a
+href=http://alum.mit.edu/www/liju99/NetApp/JavaScript/Reader/rgb.html>link</a>
+may help you pick a new color. You may directly enter "255 250 250"
+instead of converting them to floating numbers ("1.0 0.98 0.98")
+first.
+
+<p>The coloring of bonds can be restored to normal values with
+invisibilities removed by pressing 'o'.
+
+<p>As a last resort, the user can <a href=#extra_color_patch>use
+'.usr' file to completely redefine what bonds are drawn, their colors
+and radii</a>.
+
+
+<a name=shift_object_under_PBC>
+<h4>Shift object under PBC:</h4>
+
+<p>Shift + mouse drag to shift object under PBC. Alternatively, when
+CapsLock is at On, Left, Right, Up, Down, Shift+Up, Shift+Down will do
+equivalent things as in <a href=#shift_object>shift object</a>, except
+now in PBC. Lastly, Shift+IMWheel (or Shift+Ctrl+IMWheel for quicker
+action) will shift object under PBC in the forward/backward direction.
+
+<p>Press 'z' to recover the initial PBC state, where there is no
+shift.
+
+
+<a name=change_bgcolor>
+<h4>Change Background Color:</h4>
+
+<p>Press 'd', xterm will pop out with inquiry,
+<pre>
+Change background color (0.000 0.000 0.000): 
+</pre>
+and you should input three real numbers from 0 to 1 for the RGB
+values. If you press Return, the numbers in the brackets will 
+be taken as the input. They are just the current background colors,
+so nothing will change.
+
+
+<a name=change_total_view_angle>
+<h4>Change View Angle Amplification:</h4>
+
+<p>Shift+Home/End changes the total view angle that the viewport
+spans. The smaller it is, the larger the image appears on screen.
+When the session starts, the total span of view is 60 degrees.
+
+
+<a name=new_clone_quit_viewport>
+<h4>New, Clone, Quit Viewport:</h4>
+
+<p>Occasionally you want another perspective on the same configuration.
+Press 'F4' to new a viewport where all parameters take default
+values. Press 'c' to clone a viewport that is exactly the same as the
+current one. Press 'q' to quit a certain viewport and free its memory.
+
+
+<a name=system_status>
+<h4>Print System Status:</h4>
+
+<p>Press 's' to print out system status.
+
+
+<a name=find_atom> 
+<h4>Find an Atom:</h4> 
+
+<p>Press 'f' to locate an atom by entering its index (0 to
+number_of_particles-1). The <a href=#anchor_control>anchor</a> will
+then be set on that atom, and by <a href=#pull_closer_away>pulling
+closer/away</a> it will be quickly obvious which atom it is.
+
+
+<a name=goto_position>
+<h4>Go to Position:</h4>
+
+<p> Press 'g' to go to certain position, maybe somewhere inside the
+box, by entering three reduced coordinates.
+
+
+<a name=resize_window>
+<h4>Resize Window</h4>
+
+<p>Just dragging the corner of the window will do, but for more
+precise control using terminal input, press 'Ctrl+S'. The recommended
+sizes are 320x240, 640x480, 800x600, 1024x1024 ... for certain video
+compressors.
+
+
+<a name=making_jpg>
+<h4>Making <a href=http://www.jpeg.org/>jpeg</a> Screenshot:</h4>
+
+<p>Press 'j' to make .jpg screenshot.
+
+
+<a name=making_png>
+<h4>Making <a href=http://libpng.org/pub/png/>png</a> Screenshot:</h4>
+
+<p>Press 'p' to make .png screenshot.
+
+
+<a name=making_eps>
+<h4>Making Encapsulated PostScript Screenshot:</h4>
+
+<p>Press 'e' to make high-resolution .eps screenshot (try scale & print).
+<UL>
+<LI> <a href=Gallery/DNA/DNA.eps>DNA.eps</a>
+<LI> <a href=Gallery/SiC_NanoXtal/SiC_NanoXtal.eps>SiC_NanoXtal.eps</a>
+</UL>
+
+
+<a name=toggle_viewer>
+<h4>Toggle Auto-Invoking Shell Viewer:</h4>
+
+<p>Press 'v' to toggle auto-invoking shell viewer for screenshots. '<a
+href=http://www.trilon.com/xv/>xv</a>', '<a
+href=http://www.cs.wisc.edu/~ghost/>ghostview</a>', '<a
+href=http://wwwthep.physik.uni-mainz.de/~plass/gv/>gv</a>' are some of
+the applications AtomEye tries to find under the current PATH.
+
+
+<a name=load_new_config>
+<h4>Load New Config:</h4>
+
+<p>Press 'F9' to load in new config file.
+
+
+<a name=reload_config>
+<h4>Reload Configuration:</h4>
+
+<p>Press 'F10' to reload the config file, in case it has
+been refreshed in the meantime.
+
+
+<a name=step_config>
+<h4>Sequential Config List Browsing:</h4>
+
+<p>AtomEye tries to compile a list of config files sequentially
+similar to the current config. For example, if we are viewing
+"a005.cfg", AtomEye will automatically line up "a000.cfg", "a001.cfg",
+.. in front "a005.cfg", and "a006.cfg", "a007.cfg", ... after
+"a005.cfg", if these files indeed exist.
+
+<p>Press 'Insert' to backtrack config list and 'Delete' to advance
+config list. Press 'Ctrl+Insert' to go to the first of the config list
+and 'Ctrl+Delete' to go to the last of the config list. Loop-back is
+supported at the two terminations. Press 'Ctrl+F12' to change the
+stepping of advance/backtrack; the default stepping is 1.
+
+
+<a name=color_tiling>
+<h4>Define and Trace Color Tiling Blocks:</h4>
+
+<p>Press 'F2' to (re)define color tiling blocks. Then, sometime later
+on (after a new config has been loaded, see for instance <a
+href=#step_config>Sequential Config List Browsing</a>), press 'F3' to
+show the atoms in previously allocated block colors - be mindful,
+however, that the later configurations must have the same number of
+atoms as the previous configuration when the color blocks are
+defined. If you no longer need to trace anymore, you can free this
+extra piece of coloring memory by 'Ctrl+F2'.
+
+
+<a name=cutting_planes>
+<h4>Creating and Manipulating Cutting Planes</h4>
+
+<p>'Shift+[0-9,a-f]' will toggle one of the 16 available cutting
+planes.  The most recently activated cutting plane also gains the
+focus. The focused cutting plane can be advanced/retracted by
+'Shift+RightArrow/LeftArrow', its sense can be flipped by 'Shift+P',
+and it can be deleted from memory by 'Shift+<a
+href=#Meta>Meta</a>+[0-9,a-f]'.
+
+<p>A cutting planes is created when being toggled for the first
+time. The user will be asked to supply six numbers: dx,dy,dz,s0,s1,s2,
+where (dx,dy,dz) is the normal vector (doesn't have to normalized) of
+the cutting plane in Cartesian frame, (s0,s1,s2) is a point on the
+plane in reduced coordinates from 0 to 1. By default dx=1,dy=1,dz=1,
+which means the 111 plane, and (s0,s1,s2) is the current <a
+href=#anchor_control>anchor</a> position. Usually the user just needs
+to input three numbers dx,dy,dz.
+
+There are three ways to input dx,dy,dz,s0,s1,s2:
+<UL>
+<LI> Manually compute them, "Rain Man" style.
+
+<LI> Right-click on atom A once, then right-click on atom B
+<i>twice</i>, then 'Shift+[0-9,a-f]' and press return (accept the
+defaults). This will create a cutting plane between atom A and B,
+keeping atom B.
+
+<LI> Right-click on atom A once, atom B once, atom C once, then
+'Shift+[0-9,a-f]' and press return (accept the defaults).  This will
+create a cutting plane containing A-B-C, with right-handed normal.
+</UL>
+
+<p>You can shift an activated cutting plane to the current anchor
+position by 'Shift+Ctrl+[0-9,a-f]'.
+
+<p>Besides filtering the atoms, the cutting planes are also
+represented by wireframes of their sections with the H-box. A focused
+cutting plane's wireframe's color can toggled down to invisible by
+'Shift+I'.
+
+
+<a name=save_atom_indices>
+<h4>Save Atom Indices in a File</h4>
+
+<p>To create a dislocation or a crack at the desired place and
+inclination, it is usually the easiest to identity two adjacent
+crystallographic planes, and apply a force or displacement dipole.  To
+identify the atoms involved in this operation, first create a <a
+href=#cutting_planes>cutting plane</a> by for instance pressing
+'Shift+0' on <a href=mul/FCC10x10x10.cfg>FCC10x10x10.cfg</a>. Then,
+you need to click on three atoms sequentially on the exposed surface
+(to visualize the atoms you click, you may have CapsLock 'on'), and
+then press ';'
+
+<p>You will be prompted:
+<pre>
+Interplanar spacing [A]  z-margin [A]  xy-tolerance (2.5 0.01 0.01): 
+</pre>
+
+<p>The defaults are generally OK for selecting two atomic planes in
+fcc Cu with (111) interplanar spacing 2.0871 Angstrom.  Press return
+and you will then see:
+
+<pre>
+down=4 and up=1 atoms selected in filter.
+Save the selected atoms to (FCC10x10x10.idx): 
+selected atom indices [0-31999] saved to FCC10x10x10.idx.
+</pre>
+which means 4 atoms in the "down" plane and 1 atom in the "up" plane
+are selected, and the atom indices (remember that AtomEye always
+counts from 0) are saved in "FCC10x10x10.idx", which looks like:
+<pre>
+% more FCC10x10x10.idx
+4 1
+14267
+14550
+14576
+17421
+17760
+</pre>
+The first 4 indices are atoms on the "down" parallelogram, followed by
+the 1 atom on the "up" parallelogram.  Note that the "up" direction is
+the right-handed rotational axis represented by the three sequentially
+clicked atomic positions. In other words, you must click on the "down"
+atoms in anti-clockwise fashion.  The make sure, you can explicitly check the
+printout 
+<pre>
+"up" is [0.57735 0.57735 0.57735] 
+check it agrees with your mirror normal...
+</pre>
+with your desired "up" direction.
+
+<p>Your favorite MD or conjugate gradient code can then load in this
+"FCC10x10x10.idx" file and have some fun moving these selected atoms.
+Before you quit, you may identify the Burgers vector as well by <a
+href=#inquire_geometrical_info>inquiring geometrical info</a>.
+
+
+<a name=making_movie>
+<h4>Making movie:</h4>
+
+<p><OL>
+
+<p><LI> One must first have a sequence of configuration files, say
+      "00001.cfg", "00002.cfg", ..., "00005.cfg". (a sample program <a
+      href=sequence.f>sequence.f</a> shows how to do it in FORTRAN).
+
+<a name=animation_script>
+
+<p><LI> AtomEye can render a series of .<a href=#making_jpg>jpg</a>,
+.<a href=#making_png>png</a>, or .<a href=#making_eps>eps</a> images
+according to a script (default name = "scr_anim"), which looks like:
+
+<pre>
+90
+00001.cfg Pic/00001.jpg
+00002.cfg Pic/00002.jpg
+00003.cfg Pic/00003.jpg
+00004.cfg Pic/00004.jpg
+00005.cfg Pic/00005.jpg
+</pre>
+
+     The first integer (from 0 to 100) specifies the quality of the
+     images. The larger it is, the less the compression and the better
+     the quality. Usually 90 is very good and 80 is good enough. Rows
+     of string pairs then follow. The first string is the input
+     configuration filename. The second string is the output image
+     filename. Depending on the suffix, .<a href=#making_jpg>jpg</a>,
+     .<a href=#making_png>png</a>, or .<a href=#making_eps>eps</a>
+     screenshots will be saved. One can also use absolute
+     pathnames. It is better to separate the configuration files with
+     the image files, therefore "Pic/00001.jpg" and so on is
+     recommended. "<a href=scr_anim>scr_anim</a>" itself can be
+     created for example by using the following Matlab script <a
+     href=create_scr_anim.m>create_scr_anim.m</a>. If "<a
+     href=scr_anim>scr_anim</a>" does not exist, AtomEye will offer to
+     create a default one, in which case .<a href=#making_jpg>jpg</a>
+     format is used with quality 90, and the frames will go to the <a
+     href=Compression/Jpgs/>Jpgs/</a> directory (created by AtomEye if
+     it doesn't exist already).
+
+<p><LI> One now needs to pick a view point and other rendering options
+      for the movie. To do that, run "A 00005.cfg &", <a
+      href=#resize_window>choose screen size</a> (screen sizes like
+      256 by 256, 512 by 512, 768 by 512 are preferred by the video
+      compressors), angle and coloring etc., then press 'y'. AtomEye
+      asks you which animation script to use (default = "scr_anim"),
+      and will start to render "00001.cfg", "00002.cfg", ...,
+      "00005.cfg" sequence using the chosen viewpoint and other
+      options.
+
+<p><LI> On Linux, you can use the powerful <a
+        href=http://www.mplayerhq.hu/>MPlayer / MEncoder</a> utility
+        to compress sequential images to a movie. See an example shell
+        script <a href=Compression/vidcompress>vidcompress</a> and its
+        <a href=Compression/>result</a>. MPEG4 codec is recommend for
+        portability. You may also use commercial software like <a
+        href=http://www.jasc.com/>Animation Shop</a> or <a
+        href=http://www.adobe.com/>Adobe Premiere</a> to do the same
+        thing.  Use <a href=http://www.virtualdub.org/>VirtualDub</a>
+        to do extra editing.
+
+<p><LI> The AVI or MPEG4 movie should be directly playable on
+        Microsoft Windows Media Player. It may also be directly
+        inserted into Microsoft PowerPoint (pull-down menu: Insert /
+        Movies and Sounds / Movie from File). <a
+        href=http://www.mplayerhq.hu/>MPlayer</a> is an excellent free
+        AVI and MPEG4 movie player on Linux.
+
+</OL>
+
+<a name=Meta>
+<h4>What is the Meta key?</h4>
+
+<p>Some environments forbid the use of Meta or Alt key. In those
+cases, having CapsLock at "on" works as if the Meta key is pressed.
+
+<hr>
+
+
+<a name=download>
+<h2>Binary Release</h2>
+
+These are raw binaries. Right-click on the link and "Save Target
+As..." to one of your directories. Then run "chmod 755" on the
+file. To <a href=#usage>test</a>, you need to save a <a
+href=#standard_CFG>CFG</a> file as well, such as <a
+href=Gallery/Nanotube/cnt8x3.cfg>cnt8x3.cfg</a>.
+
+<UL>
+<LI> <a href=Download/A.i686>i686 Linux</a>
+
+<LI> <a href=Download/A.alpha>Alpha Linux GLIBC2.1</a>
+
+<LI> <a href=Download/A.IRIX>Sgi Irix</a>
+
+<LI> <a href=Download/A.IRIX64>Sgi Irix64</a>
+
+<LI> <a href=Download/A.Sun>Sun Solaris</a>
+
+<LI> <a href=Download/A.HPUX>HP UX</a>
+
+<LI> <a href=Download/CYGWIN.zip>Windows</a> with 
+      <a href=http://sources.redhat.com/cygwin/>Cygwin</a>
+    / <a href=http://x.cygwin.com/>X</a> 
+(<a href=Download/CYGWIN/README.txt>README.txt</A>)
+
+<LI> <a href=Download/A.OSF1>Alpha Tru64 UNIX</a>
+
+<LI> Mac OS X (<a href=Download/A.Darwin>v10.4 and before</a>,
+               <a href=Download/A.DarwinIntel386>v10.5 "Leopard"</a>) with 
+      <a href=http://developer.apple.com/darwin/>Darwin</a> (see 
+      <a href=http://www.xfree86.org/4.3.0/Darwin2.html>A</a>, 
+      <a href=http://www.mrcla.com/XonX/FAQ.html#3buttons>B</a>,
+      <a href=http://www.xdarwin.org/faq/#fakebuttons>C</a>
+      for button issues)
+
+</UL>
+
+<h4>When I get the chance, I try to make up-to-date executables for
+different platforms, but only the i686 Linux one is <u>guaranteed</u>
+to be of the latest stable version with full functionality.
+</h4>
+
+<hr>
+
+
+<a name=FAQ>
+<h2>Frequently Asked Questions</h2>
+
+<p><ol>
+
+<p><li> I encounter the following error message:
+<pre>
+ATOM_COORDINATION_MAX = 24 exceeded
+</pre>
+or
+<pre>
+error: Imakespace: min=0 max=2744 jammed between i=1262 and i+1.
+</pre>
+and AtomEye quits. What's the problem?
+
+<p><b>Answer</b>: The above error message means some atoms in the
+configuration are getting too close to each other. The number of atoms
+within the default cutoff radii of first-nearest-neighbors exceeds
+24. This usually means there is some pathology in the configuration
+(maybe you have miscalculated the atomic geometry? maybe your
+time-integrator has blown up?).
+
+<p> To see what is in the configuration, artificially scale up your
+supercell 10 times by adding <a href=#standard_CFG_example>one
+optional line</a> after the 'Number of particles = ' line:
+<pre>
+A = 10 Angstrom (basic length-scale)
+</pre>
+Most likely this would reduce all atoms to coordination-0. But at
+least you can now load your configuration into AtomEye, see the atoms,
+and debug the configuration.
+
+</ol>
+
+<hr>
+
+
+<a name=bugreport>
+<h2>Bug report</h2>
+
+There will always be bugs in AtomEye. When you think you have
+encountered one, please do the following:
+<UL>
+
+<LI> To the best of your capability, try to make the bug repeatable.
+
+<LI> Write <a href=http://164.107.79.177/lij/card.html>me</a> an
+email, with detailed, step-by-step instructions, so I can reproduce
+the bug; and attach all necessary files in the email.
+
+</UL>
+
+<hr>
+
+
+<a name=history>
+<h2>History</h2>
+
+I started using <a
+href=http://www.bernstein-plus-sons.com/software/rasmol/>Rasmol</a> in
+1997 and was quite impressed. But its as well as <a
+href=http://www.rcsb.org/pdb/>PDB</a> file format's limitations for
+large-scale molecular dynamics (MD) simulations became painfully
+obvious after some time. My colleagues Dongyi Liao, Wei Cai and myself
+all started developing our own molecular visualization codes. It was a
+very friendly and helpful environment even though we differ in coding
+styles, and a lot of ideas were exchanged. Some of my earlier attempts
+are placed <a href=../>here</a>.
+
+<p>Gradually it was realized that <a
+href=http://www.x.org/>X-Window</a> does not provide sufficient native
+capability. There are two options. One is to program in <a
+href=http://www.opengl.org/>OpenGL</a>, the other is to basically
+rewrite the graphics functionality of Xlib starting from scratch
+(antialised lines, clipping, tilted ellipses, etc.) and just to use <a
+href=http://www.x.org/>X-Window</a> as a pipe (MIT-SHM extension /
+XPutImage). I took the second approach based on the observation that
+one needs to render <i>very</i> few types of objects in massive
+quantities: spheres (as atoms), cylinders (as bonds), and points (as
+charge density). Therefore very efficient routines, such as sphere
+caching, can be written, which is included in the <i>libAX</i> (Advanced
+X) library. <a href=http://www.nvidia.com>Graphics card</a> has
+evolved, but so has CPU / main memory, as they essentially are from
+the same technology. Therefore in foreseeable future, it is highly
+unlikely that this approach loses to <a
+href=http://www.opengl.org/>OpenGL</a> which depends on polygon
+assemblage.
+
+<p>In addition to <i>libAX</i>, a crucial element of AtomEye is the
+order-N treatment of atomistic configurations for bond calculation and
+coordination number / local strain coloring of atoms. This library,
+<i>libAtoms</i>, is shared between AtomEye and an order-N MD code. We
+assume always that the configuration is under periodic boundary
+condition (PBC) in a parallelepiped box. The rationale is that it is
+not too difficult to represent a non-PBC configuration as a PBC
+configuration, but not the other way around.
+
+<p>AtomEye was first compiled in 1999, the executable is called <a
+href=#download>A</a>. The early users are myself, Dongyi Liao, Wei
+Cai, Dongsheng Xu, Jinpeng Chang and Shigenobu Ogata. Extensive
+debugging and improvements have been made to the code, driven by user
+requests. AtomEye's screenshots have appeared on the cover of <a
+href=Gallery/Covers/NatureMaterialsNov2007Volume6No11/IE.pdf><i>Nature
+Materials</i></a>, <a
+href=Gallery/Covers/PNASFeb2007Volume104No9/InterfacialPlasticity.pdf>
+<i>PNAS</i></a> and 
+<a href=Gallery/Covers/PRLJan2008Volume100No2/cv100002.pdf><i>Physical 
+Review Letters</i></a>.
+<!-- , and in articles of <a -->
+<!-- href=../../Papers/02/Li02c.pdf><i>Nature</i></a> -->
+<!-- and <a -->
+<!-- href=Gallery/Articles/ScientificAmericanOct25_2002/Firefox.pdf><i>Scientific -->
+<!-- American</i></a>. -->
+
+<hr>
+
+
+<ADDRESS>
+Email: <a
+href="mailto:liju@seas.upenn.edu">liju@seas.upenn.edu</a>,
+phone: 215-898-1558. 
+<!--  &nbsp;<img src=http://www.mit.edu/cgi/counter/A> -->
+</ADDRESS>
+
+<a href="http://freelogs.com/stats/a/atomeye/" target="_top"><img
+border="0" alt="Free Web Counter"
+src="http://xyz.freelogs.com/counter/index.php?u=atomeye&s=fdg"
+ALIGN="middle" HSPACE="4" VSPACE="2"></a><script
+src=http://xyz.freelogs.com/counter/script.php?u=atomeye></script>
+<br><a style="font-size:12" href="http://freelogs.com/create.php"
+target="_top"><font style="font-size:12" color="#666666">Site
+Counter</font></a>
