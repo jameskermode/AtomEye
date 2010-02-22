@@ -927,8 +927,12 @@ void save_auxiliary_colormap (int iw, char *default_cmap_fname)
       }
         if (AX_display[iw])
 #endif
+#ifndef ATOMEYE_LIB
         printf ("auxiliary colormap saved on \"%s\" (%d bytes)\n", fname,
                 (int)Fsize(fname));
+#else
+	;
+#endif
     }
     else
 #ifdef USE_CUI
