@@ -47,7 +47,7 @@ LDFLAGS = ${SYSTEM_LIB_FLAG} ${USE_SYSTEM_LIB} -L${MY_LIB_DIR} ${USE_MY_LIB}
 ${STATIC_LIB_FILE}:	${OBJS}
 	-@echo "***************************************************"; \
 	rm -f $@; \
-	${AR} $@ ${OBJS}; \
+	${AR} src $@ ${OBJS}; \
 	${RANLIB} $@; \
 	${NM} $@; \
 	echo "***************************************************"
