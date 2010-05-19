@@ -25,7 +25,7 @@ all: install
 atomeyelib: ${STATIC_LIB_FILE}
 
 include Makefile.inc
-include Makefile.common
+include Makefile.rules
 ifeq (${QUIP_ARCH},)
   include Makefile.arch
 else
