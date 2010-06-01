@@ -146,6 +146,7 @@ class AtomEyeView(object):
                  *arrowargs, **arrowkwargs):
         self.atoms_orig = atoms
         self.atoms = atoms
+        self.is_quippy = False
         self.frame = frame
         self.delta = delta
 
@@ -193,9 +194,11 @@ class AtomEyeView(object):
         self.is_alive = False
         try:
             self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
+            self.is_quippy = True
         except AttributeError:
             self.atoms = convert_atoms_from_ase(self.atoms)
             self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
+            self.is_quippy = False
         views[self._window_id] = self
         while not self.is_alive:
             time.sleep(0.1)
@@ -211,16 +214,19 @@ class AtomEyeView(object):
 
         if idx >= len(self.atoms_orig):
             idx = idx % len(self.atoms_orig)
-        #idx = idx + 1 # atomeye uses zero based indices            
+        if self.is_quippy:
+            idx = idx + 1 # atomeye uses zero based indices
         print "frame %d, atom %d clicked" % (self.frame, idx)
-        print self.atoms_orig[idx]
-        ## for k in sorted(d):
-        ##     v = d[k]
-        ##     if isinstance(v, FortranArray) and v.dtype.kind == 'f':
-        ##         print '%s = %s (norm %f)' % (k, v, v.norm())
-        ##     else:
-        ##         print '%s = %s' % (k, v)
-        ## print
+        if self.is_quippy:
+            for k in sorted(d):
+                v = d[k]
+                if isinstance(v, FortranArray) and v.dtype.kind == 'f':
+                    print '%s = %s (norm %f)' % (k, v, v.norm())
+                else:
+                    print '%s = %s' % (k, v)
+            print
+        else:
+            print self.atoms[idx]
         sys.stdout.flush()
 
     def on_advance(self, mode):
@@ -295,23 +301,23 @@ class AtomEyeView(object):
                 #property = '_show'
                 raise NotImplementedError
             else:
-                #if theat.has_property('_show'):
-                #    theat.remove_property('_show')
-                #theat.add_property('_show', property)
-                #property = '_show'
-                raise NotImplementedError
+                if self.atoms.has_property('_show'):
+                    self.atoms.remove_property('_show')
+                self.atoms.add_property('_show', property)
+                property = '_show'
+                #raise NotImplementedError
 
-            ## # Make sure property we're looking at is in the first 48 columns, or it won't be available
-            ## if sum((theat.data.intsize, theat.data.realsize, theat.data.logicalsize, theat.data.strsize)) > ATOMEYE_MAX_AUX_PROPS:
+            # Make sure property we're looking at is in the first 48 columns, or it won't be available
+            if self.is_quippy and sum((self.atoms.data.intsize, self.atoms.data.realsize, self.atoms.data.logicalsize, self.atoms.data.strsize)) > ATOMEYE_MAX_AUX_PROPS:
 
-            ##     col = 0
-            ##     for p in theat.properties:
-            ##         col += theat.properties[p][3] - theat.properties[p][2] + 1
-            ##         if p == property:
-            ##             break
+                col = 0
+                for p in self.atoms.properties:
+                    col += self.atoms.properties[p][3] - self.atoms.properties[p][2] + 1
+                    if p == property:
+                        break
 
-            ##     if col >= ATOMEYE_MAX_AUX_PROPS:
-            ##         theat.properties.swap(theat.properties.keys()[2], property)
+                if col >= ATOMEYE_MAX_AUX_PROPS:
+                    self.atoms.properties.swap(self.atoms.properties.keys()[2], property)
 
         if highlight is not None:
             #theat.add_property('highlight', False)
@@ -322,9 +328,11 @@ class AtomEyeView(object):
         self.atoms_orig = self.atoms
         try:
             _atomeye.load_atoms(self._window_id, title, self.atoms)
+            self.is_quippy = True
         except AttributeError:
             self.atoms = convert_atoms_from_ase(self.atoms)
             _atomeye.load_atoms(self._window_id, title, self.atoms)
+            self.is_quippy = False
         if property is not None:
             self.aux_property_coloring(property)
 
