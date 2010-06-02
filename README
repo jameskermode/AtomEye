@@ -1,0 +1,24 @@
+AtomEye (c) Ju Li. <See http://mt.seas.upenn.edu/Archive/Graphics/A>
+for details. 
+
+Modifications to read XYZ and NetCDF files and Python interface
+(c) James Kermode 2008-2010 <james.kermode@
+
+Compilation
+===========
+
+You'll need to edit Makefile.config for your system, and then run
+'make' to build a binary or 'make atomeyelib' to build a library.
+
+See the 'Python' subdirectory for a Python extension module which
+links to this library. Documentation for the Python interface is
+available at <http://www.jrkermode.co.uk/quippy/atomeye.html>
+
+QUIP users
+==========
+
+If you are a QUIP user, you should check out this module underneath
+${QUIP_ROOT}/Tools, and set the QUIP_ARCH environment variable
+appropriately. This will use your QUIP Makefiles to determine the
+compiler, flags and libraries needed. You can then run 'make' or 'make
+atomeyelib' as above.

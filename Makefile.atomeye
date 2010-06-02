@@ -1,6 +1,26 @@
-#
-# Top level makefile, just loops over subdirs
-#
+include Makefile.config
+
+ifeq (${HAVE_QUIP},1)
+  # Override with settings from QUIP Makefiles
+  include Makefile.inc
+  include Makefile.rules
+  include Makefile.${QUIP_ARCH}
+
+  CFLAGS += -fPIC
+  FC = ${F77}
+  LD = ${CC}
+else
+  SVN_VERSION := -D'SVN_VERSION="$(shell svnversion -n ..)"'
+  CFLAGS += ${SVN_VERSION}
+endif
+
+export CFLAGS
+export CC
+export FC
+export LD
+
+ATOMEYE_LIBS = -lm -lXpm -lXext -lX11 -lmpi -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl  ${SYSLIBS}
+export ATOMEYE_LIBS
 
 SUBDIRS = Timer IO Scalar VecMat Min VecMat3 Atoms AX
 
@@ -9,8 +29,10 @@ ALLSUBDIRS = ${SUBDIRS} A3
 .PHONY: all clean subdirs cleansubdirs atomeyelib
 
 subdirs:
-	ln -sf ${QUIP_ROOT}/libAtoms/xyz_netcdf.c Atoms/xyz_netcdf.c
-	ln -sf ${QUIP_ROOT}/libAtoms/xyz_netcdf.h Atoms/xyz_netcdf.h
+ifeq (${HAVE_QUIP},1)
+	-cp -f ${QUIP_ROOT}/libAtoms/xyz_netcdf.c Atoms/xyz_netcdf.c
+	-cp -f ${QUIP_ROOT}/libAtoms/xyz_netcdf.h Atoms/xyz_netcdf.h
+endif
 	for dir in ${SUBDIRS}; do \
 	  cp $$dir/*.h include; \
 	  $(MAKE) -C $$dir || exit 1; \
@@ -25,8 +47,10 @@ cleansubdirs:
 all: subdirs
 
 atomeyelib:
-	ln -sf ${QUIP_ROOT}/libAtoms/xyz_netcdf.c Atoms/xyz_netcdf.c
-	ln -sf ${QUIP_ROOT}/libAtoms/xyz_netcdf.h Atoms/xyz_netcdf.h
+ifeq (${HAVE_QUIP},1)
+	-cp -f ${QUIP_ROOT}/libAtoms/xyz_netcdf.c Atoms/xyz_netcdf.c
+	-cp -f ${QUIP_ROOT}/libAtoms/xyz_netcdf.h Atoms/xyz_netcdf.h
+endif
 	for dir in ${SUBDIRS}; do \
 	  cp $$dir/*.h include; \
 	  $(MAKE) -C $$dir ATOMEYE_LIB=-DATOMEYE_LIB || exit 1; \

@@ -24,16 +24,9 @@ GDBTMP = /tmp/${PROG}.gdb
 all: install
 atomeyelib: ${STATIC_LIB_FILE}
 
-include Makefile.inc
-include Makefile.rules
-ifeq (${QUIP_ARCH},)
-  include Makefile.arch
-else
-  include Makefile.${QUIP_ARCH}
-endif
+
 
 USE_SYSTEM_LIB = ${ATOMEYE_LIBS}
-LD = ${LINKER}
 
 MY_BIN_DIR = ../bin
 MY_LIB_DIR = ../lib

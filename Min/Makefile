@@ -19,16 +19,6 @@ EXESUFFIX =
 
 all: install
 
-include Makefile.inc
-include Makefile.rules
-ifeq (${QUIP_ARCH},)
-  include Makefile.arch
-else
-  include Makefile.${QUIP_ARCH}
-endif
-
-FC = ${F77}
-
 USE_SYSTEM_LIB = ${ATOMEYE_SYSTEM_LIB}
 
 MY_BIN_DIR = ../bin

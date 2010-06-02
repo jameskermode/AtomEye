@@ -16,13 +16,7 @@ EXESUFFIX =
 
 all: install
 
-include Makefile.inc
-include Makefile.rules
-ifeq (${QUIP_ARCH},)
-  include Makefile.arch
-else
-  include Makefile.${QUIP_ARCH}
-endif
+
 
 USE_SYSTEM_LIB = ${ATOMEYE_SYSTEM_LIB}
 
