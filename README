@@ -2,7 +2,7 @@ AtomEye (c) Ju Li. <See http://mt.seas.upenn.edu/Archive/Graphics/A>
 for details. 
 
 Modifications to read XYZ and NetCDF files and Python interface
-(c) James Kermode 2008-2010 <james.kermode@
+(c) James Kermode 2008-2010 <james.kermode@kcl.ac.uk>
 
 Compilation
 ===========
@@ -13,6 +13,9 @@ You'll need to edit Makefile.config for your system, and then run
 See the 'Python' subdirectory for a Python extension module which
 links to this library. Documentation for the Python interface is
 available at <http://www.jrkermode.co.uk/quippy/atomeye.html>
+
+If you want to compile both targets, it's very important that you do a
+'make clean' in between building the standalone binary and the library.
 
 QUIP users
 ==========
