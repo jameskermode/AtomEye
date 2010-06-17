@@ -82,4 +82,4 @@ setup(name='atomeye',
       description='Python bindings to AtomEye',
       author='James Kermode',
       author_email='james.kermode@kcl.ac.uk',
-      url='http://www.jrkermode.co.uk/AtomEye')
+      url='http://www.jrkermode.co.uk/quippy/atomeye.html')
