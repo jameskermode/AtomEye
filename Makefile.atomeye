@@ -58,3 +58,8 @@ endif
 	$(MAKE) -C A3 ATOMEYE_LIB=-DATOMEYE_LIB atomeyelib || exit 1
 
 clean: cleansubdirs
+	-rm -rf AtomEye.app
+
+AtomEye.app: all
+	cp -r AtomEye.app.template AtomEye.app
+	cp bin/A AtomEye.app/Contents/MacOS/A

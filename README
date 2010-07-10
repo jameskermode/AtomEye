@@ -25,3 +25,13 @@ ${QUIP_ROOT}/Tools, and set the QUIP_ARCH environment variable
 appropriately. This will use your QUIP Makefiles to determine the
 compiler, flags and libraries needed. You can then run 'make' or 'make
 atomeyelib' as above.
+
+
+Mac OS X Application
+====================
+
+To build a Mac OS X 'droplet' application, run 'make
+AtomEye.app'. This application can then be copied to your Applications
+folder and associated with XYZ files to allow them to be opened from
+the Finder.
+
