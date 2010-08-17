@@ -13,9 +13,12 @@
 #   include "p3dp.h"
 #endif
 
+#if HAVE_LIBATOMS
+#include "libatoms.h"
+#endif
+
 #ifdef ATOMEYE_LIB
 #include "atomeyelib.h"
-#include "libatoms.h"
 #endif
 
 /* from libAtoms: */
@@ -955,6 +958,11 @@ int main (int argc, char *argv[])
 #else
     char command[512], *TTYname;
 #endif
+
+#ifdef HAVE_LIBATOMS
+    int silent = -1;
+    system_initialise(&silent);
+#endif
     memcpy(CoordColor, ATOM_COORDINATION_COLOR,
            (ATOM_COORDINATION_MAX+1)*sizeof(Atom_coordination_color));
     memcpy(Dmitri, MENDELEYEV, (MENDELEYEV_MAX+1)*sizeof(struct Mendeleyev));
@@ -1002,7 +1010,9 @@ int main (int argc, char *argv[])
 #ifdef USE_P3D
     if (!p3dp_enabled) {
 #endif
+#ifdef HAVE_LIBATOMS
       if (!strstr(config_fname, ".nc") && !strstr(config_fname,".xyz")) {
+#endif
     if (!Fexists(config_fname))
     {
         pr ("\n** %s: **\n", config_fname);
@@ -1015,7 +1025,9 @@ int main (int argc, char *argv[])
         pr ("** This file is unreadable! **\n");
         return(1);
     }
+#ifdef HAVE_LIBATOMS
       }
+#endif
 #ifdef USE_P3D
     }
 #endif

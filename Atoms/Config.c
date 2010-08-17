@@ -19,7 +19,9 @@
 #define ELEM_CHARGE 1.60217653e-19
 #define MASS_CONVERT 1.0e7 / (N_A * ELEM_CHARGE)
 
+#ifdef HAVE_LIBATOMS
 #include "libatoms.h"
+#endif
 
 
 /****************************************************/
@@ -2756,18 +2758,22 @@ int Config_Load (char *fname, FILE *info, Alib_Declare_Config)
         {
             if (strstr(p, "pdb") || strstr(p, "PDB"))
 	      goto PDB;
+#ifdef HAVE_LIBATOMS
 	    if (strstr(p, "nc") || strstr(p, "NC"))
 	      goto NETCDF;
 	    if (strstr(p, "xyz") || strstr(p, "XYZ"))
 	      goto XYZ;
+#endif
         }
         else {
 	  if (strstr(q, "pdb") || strstr(q, "PDB"))
             goto PDB;
+#ifdef HAVE_LIBATOMS
 	  if (strstr(q, "nc") || strstr(q, "NC"))
 	    goto NETCDF;
 	  if (strstr(q, "xyz") || strstr(q, "XYZ"))
 	    goto XYZ;
+#endif
 	}
     }
     Fprintf(info, "should be Ju Li's CFG format.\n\n");
@@ -2777,23 +2783,16 @@ int Config_Load (char *fname, FILE *info, Alib_Declare_Config)
     Fprintf(info, "should be Protein Data Bank format.\n\n");
     Config_load_from_pdb(fname, info, Config_Alib_to_Alib);
     return(CONFIG_PDB_LOADED);
-/*  NETCDF: */
-/*     Fprintf(info, "should be NetCDF trajectory.\n\n"); */
-/*     Config_load_netcdf(fname, info, Config_Alib_to_Alib); */
-/*     return(CONFIG_CFG_LOADED); // We want folding into primitive cell, not bounding box */
-/*  XYZ: */
-/*     Fprintf(info, "should be XYZ format\n\n"); */
-/*     Config_load_xyz(fname, info, Config_Alib_to_Alib); */
-/*     return(CONFIG_CFG_LOADED); // We want folding into primitive cell, not bounding box */
+#ifdef HAVE_LIBATOMS
  NETCDF:
  XYZ:
     Fprintf(info, "calling Config_load_libatoms_filename\n\n");
     Config_load_libatoms_filename(fname, info, Config_Alib_to_Alib);
     return(CONFIG_CFG_LOADED); // We want folding into primitive cell, not bounding box
-    
-    
+#endif    
 } /* end Config_Load() */
 
+#ifdef HAVE_LIBATOMS
 void Config_load_libatoms(fortran_t *params, fortran_t *properties, double lattice[3][3], int n_atom, FILE *info, Alib_Declare_Config)
 {
   int i,n, entry_count,j,k, species_idx, pos_idx;
@@ -2923,17 +2922,14 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
   int netcdf, xyz, gotfilter;
   int n_frame, n_atom, n_label, n_string, i;
   static int frame;
-  static int system_initialised = 0;
   fortran_t params[SIZEOF_FORTRAN_T], properties[SIZEOF_FORTRAN_T];
   double lattice[3][3];
-  int offset, inc,  error, silent, range[2];
+  int offset, inc,  error, range[2];
 
   xyz = 0;
   netcdf = 0;
   offset = 0;
   error = 0;
-  silent = -1;
-  if (!system_initialised) system_initialise(&silent);
   dictionary_initialise(params);
   dictionary_initialise(properties);
     
@@ -3008,7 +3004,7 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
   sprintf(buf1, buf2, frame);
   strcat(fname, buf1);
 }
-
+#endif
 
 #ifdef _CONFIG_TEST
 #define CONFIG_FILE "/tmp/aa"

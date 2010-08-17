@@ -6,10 +6,10 @@ ifeq (${HAVE_QUIP},1)
   include Makefile.rules
   include Makefile.${QUIP_ARCH}
 
-  CFLAGS += -fPIC
+  CFLAGS += -fPIC -DHAVE_LIBATOMS
   FC = ${F77}
   LD = ${CC}
-  LIBATOMS=${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -lgfortran	
+  SYSLIBS += ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -lgfortran	
 else
   SVN_VERSION := -D'SVN_VERSION="$(shell svnversion -n ..)"'
   CFLAGS += ${SVN_VERSION}
@@ -20,7 +20,7 @@ export CC
 export FC
 export LD
 
-ATOMEYE_LIBS = -lm -lXpm -lXext -lX11 -lmpi -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl ${LIBATOMS} ${SYSLIBS}
+ATOMEYE_LIBS = -lm -lXpm -lXext -lX11 -lmpi -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl ${SYSLIBS}
 export ATOMEYE_LIBS
 
 SUBDIRS = Timer IO Scalar VecMat Min VecMat3 Atoms AX
