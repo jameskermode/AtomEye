@@ -52,94 +52,6 @@ def on_new_window(iw):
         views[iw].is_alive = True
     else:
         views[iw] = AtomEyeView(window_id=iw)
-
-def convert_atoms_from_ase(at):
-    """Construct a copy of `at` which has required attributes for _atomeye.
-    `at.n`, `at.lattice`, `at.propeties`, `at.data`, `at.data.intsize`, `at.data.int`,
-    `at.data.realsize`, `at.data.real`, `at.data.strsize`, `at.data.str`,
-    `at.data.logicalsize`, `at.data.logical`."""
-    
-    class DummyAtoms: pass
-    class DummyAtomsData: pass
-
-    PROPERTY_INT = 1
-    PROPERTY_REAL = 2
-    PROPERTY_STR = 3
-    PROPERTY_LOGICAL = 4
-    STRING_LENGTH = 10
-
-    name_map = {'positions': 'pos',
-                'masses': 'mass',
-                'numbers': 'z'}
-
-    type_map = {'i': PROPERTY_INT,
-                'f': PROPERTY_REAL,
-                'S': PROPERTY_STR}
-
-    def pad(s, length=STRING_LENGTH):
-        res = [' ' for i in range(length)]
-        for i,ch in enumerate(s):
-            res[i] = ch
-        return res
-
-    nat = DummyAtoms()
-    nat.n = at.get_number_of_atoms()
-    if all(at.get_pbc()):
-        # Use existing cell
-        nat.lattice = at.get_cell().T
-    else:
-        # Compute bounding box
-        nat.lattice = numpy.diag([2*(at.get_positions()[:,i].max() - at.get_positions()[:,i].min()) for i in range(3)])
-
-    nat.properties = {}
-    nat.data = DummyAtomsData()
-
-    size = {PROPERTY_INT: 0,
-            PROPERTY_REAL: 0,
-            PROPERTY_STR: 0,
-            PROPERTY_LOGICAL: 0}
-
-    # add species to arrays
-    arrays = at.arrays.copy()
-    arrays['species'] = numpy.array(at.get_chemical_symbols())
-
-    for name, array in zip(arrays.keys(), arrays.values()):
-        pname = name_map.get(name, name)
-        if pname != name:
-            arrays[pname] = arrays[name]
-        ptype = type_map[array.dtype.kind]
-        assert array.shape[0] == nat.n
-        if len(array.shape) == 1:
-            ncols = 1
-        else:
-            ncols = array.shape[1]
-
-        nat.properties[pname] = (ptype, size[ptype]+1, size[ptype] + ncols)
-        size[ptype] += ncols
-
-    nat.data.intsize = size[PROPERTY_INT]
-    nat.data.realsize = size[PROPERTY_REAL]
-    nat.data.strsize = size[PROPERTY_STR]
-    nat.data.logicalsize = size[PROPERTY_LOGICAL]
-
-    nat.data.int = numpy.zeros((size[PROPERTY_INT], nat.n), dtype=numpy.int32, order='F')
-    nat.data.real = numpy.zeros((size[PROPERTY_REAL], nat.n), dtype='d', order='F')
-    nat.data.str = numpy.zeros((STRING_LENGTH,size[PROPERTY_STR], nat.n), dtype='S', order='F')
-    nat.data.logical = numpy.zeros((size[PROPERTY_LOGICAL], nat.n), dtype=numpy.int32, order='F')
-
-    for name, (ptype, c1, c2) in nat.properties.iteritems():
-        if ptype == PROPERTY_INT:
-            nat.data.int[c1-1:c2,:] = arrays[name].T
-        elif ptype == PROPERTY_REAL:
-            nat.data.real[c1-1:c2,:] = arrays[name].T
-        elif ptype == PROPERTY_STR:
-            for i,a in enumerate(arrays[name]):
-                assert c1 == c2 # no vector string properties allowed
-                nat.data.str[:,c1-1,i] = pad(arrays[name][i])
-        elif ptype == PROPERTY_LOGICAL:
-            nat.data.logical[c1-1:c2,:] = arrays[name].T
-
-    return nat
     
 class AtomEyeView(object):
     def __init__(self, atoms=None, window_id=None, copy=None, frame=1, delta=1, property=None, arrows=None, nowindow=0,
@@ -192,13 +104,8 @@ class AtomEyeView(object):
 
         self.atoms_orig = self.atoms
         self.is_alive = False
-        try:
-            self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
-            self.is_quippy = True
-        except AttributeError:
-            self.atoms = convert_atoms_from_ase(self.atoms)
-            self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
-            self.is_quippy = False
+        self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
+        self.is_quippy = True
                 
         views[self._window_id] = self
         while not self.is_alive:
@@ -315,16 +222,10 @@ class AtomEyeView(object):
             raise NotImplementedError
 
         self.atoms_orig = self.atoms
-        try:
-            _atomeye.load_atoms(self._window_id, title, self.atoms)
-            self.is_quippy = True
-        except AttributeError:
-            self.atoms = convert_atoms_from_ase(self.atoms)
-            _atomeye.load_atoms(self._window_id, title, self.atoms)
-            self.is_quippy = False
+        _atomeye.load_atoms(self._window_id, title, self.atoms)
+        self.is_quippy = True
         if property is not None:
             self.aux_property_coloring(property)
-
         if arrows is not None:
             self.draw_arrows(arrows, *arrowargs, **arrowkwargs)
 
