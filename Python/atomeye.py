@@ -196,9 +196,15 @@ class AtomEyeView(object):
             self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
             self.is_quippy = True
         except AttributeError:
-            self.atoms = convert_atoms_from_ase(self.atoms)
-            self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
-            self.is_quippy = False
+            try:
+                self.atoms = convert_atoms_from_ase(self.atoms)
+                self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
+                self.is_quippy = False
+            except AttributeError:
+                self.atoms = convert_atoms_from_ase(self.atoms.to_ase())
+                self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
+                self.is_quippy = False                
+                
         views[self._window_id] = self
         while not self.is_alive:
             time.sleep(0.1)
