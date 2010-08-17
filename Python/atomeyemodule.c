@@ -159,10 +159,10 @@ static int update_atoms_structure(PyObject *pyat)
   return 1;
 
  fail:
-  Py_DECREF(n);                       
-  Py_DECREF(properties);
-  Py_DECREF(fpointer);
-  Py_DECREF(lattice);
+  Py_XDECREF(n);                       
+  Py_XDECREF(properties);
+  Py_XDECREF(fpointer);
+  Py_XDECREF(lattice);
   return 0;
 }
 
