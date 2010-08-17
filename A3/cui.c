@@ -5080,17 +5080,6 @@ renderer:
 #include "atomeyelib.h"
 #include "libatoms.h"
 
-#define ATOMEYELIB_MAX_EVENTS 10
-#define ATOMEYELIB_STR_LEN 255
-
-typedef struct {
-  int event;
-  char instr[ATOMEYELIB_STR_LEN];
-  void *data;
-} Atomeyelib_events;
-
-#define ATOMEYELIB_MAX_EVENT_ID 5
-
 Atomeyelib_events atomeyelib_events[AX_MAXWIN][ATOMEYELIB_MAX_EVENTS];
 int atomeyelib_n_events[AX_MAXWIN];
 int atomeyelib_q_head[AX_MAXWIN];
@@ -5100,16 +5089,19 @@ int atomeyelib_icopy = -1;
 
 extern bool guess_to_be_PBC;
 
-int atomeyelib_init(int argc, char *argv[], void *data)
+int atomeyelib_init(int argc, char *argv[], Atomeyelib_atoms *data)
 {
     register int i;
     int k;
     double tmp[3];
+    int silent = -1;
 #ifdef USE_CUI
     double timing[4];
 #else
     char command[512], *TTYname;
 #endif
+    system_initialise(&silent);
+
     memcpy(CoordColor, ATOM_COORDINATION_COLOR,
            (ATOM_COORDINATION_MAX+1)*sizeof(Atom_coordination_color));
     memcpy(Dmitri, MENDELEYEV, (MENDELEYEV_MAX+1)*sizeof(struct Mendeleyev));
@@ -5180,7 +5172,7 @@ int atomeyelib_init(int argc, char *argv[], void *data)
     if (cui_enabled && IS_MANAGER) timing[0] = cui_wtime();
 #endif
     if (data != NULL) {
-      Config_load_libatoms((Atoms *)data, NULL, Config_Aapp_to_Alib);
+      Config_load_libatoms(data->params, data->properties, data->lattice, data->n_atom, NULL, Config_Aapp_to_Alib);
       i = CONFIG_CFG_LOADED;
     } else 
       i = CONFIG_LOAD (config_fname, Config_Aapp_to_Alib);
@@ -5318,7 +5310,7 @@ int atomeyelib_open_window(int copy)
   return iw;
 }
 
-int atomeyelib_queueevent(int iw, int event, char *instr, void *data, char *outstr) {
+int atomeyelib_queueevent(int iw, int event, char *instr, Atomeyelib_atoms *data, char *outstr) {
 
   XExposeEvent expose;
   Display *disp;
@@ -5410,7 +5402,7 @@ bool atomeyelib_treatevent(int iw) {
 
     break;
   case ATOMEYELIB_LOAD_ATOMS:
-    atomeyelib_load_libatoms(iw, (Atoms *)atomeyelib_events[iw][qhead].data, 
+    atomeyelib_load_libatoms(iw, atomeyelib_events[iw][qhead].data, 
 			     atomeyelib_events[iw][qhead].instr, &outstr);
     //if (outstr != NULL)
     // fprintf(stderr, outstr);
@@ -5477,7 +5469,7 @@ int atomeyelib_run_command(int iw, char *line, char **outstr) {
 }
 
 /* Copy data from Atoms C structure in memory */
-int atomeyelib_load_libatoms(int iw, Atoms *atoms, char *title, char **outstr) 
+int atomeyelib_load_libatoms(int iw, Atomeyelib_atoms *atoms, char *title, char **outstr) 
 {
     int i, j, k, old_np;
     V3 hook_s, tmp, dx;
@@ -5494,7 +5486,7 @@ int atomeyelib_load_libatoms(int iw, Atoms *atoms, char *title, char **outstr)
 
     old_np = np;
     CLONE(symbol, SYMBOL_SIZE*np, char, old_symbol);
-    Config_load_libatoms(atoms, NULL, Config_Aapp_to_Alib);
+    Config_load_libatoms(atoms->params, atoms->properties, atoms->lattice, atoms->n_atom, NULL, Config_Aapp_to_Alib);
 
     for (k=0; k<CONFIG_num_auxiliary; k++)
         if (*blank_advance(CONFIG_auxiliary_name[k])==EOS)

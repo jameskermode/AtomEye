@@ -1133,6 +1133,7 @@ void redirect_stderr_to (FILE *fp)
 /* perror() driver using strf() */
 void pe (char *format, ...)
 {
+#ifndef ATOMEYE_LIB
     va_list ap;
     va_start(ap, format);
     fprintf (stderr, "error: ");
@@ -1141,6 +1142,15 @@ void pe (char *format, ...)
     va_end(ap);
     exit(1);
     return;
+#else
+    int *error = NULL;
+    va_list ap;
+    char *error_str;
+    va_start(ap, format);
+    error_str = vstrf(format,ap);
+    va_end(1);
+    RAISE_ERROR(error_str);
+#endif
 } /* end pe() */
 
 #ifdef _pe_TEST

@@ -33,7 +33,7 @@ static PyObject *on_advance_pyfunc = NULL;
 static PyObject *on_close_pyfunc = NULL;
 static PyObject *on_new_pyfunc = NULL;
 
-static Atoms *atomeye_atoms = NULL;
+static Atomeyelib_atoms atomeye_atoms;
 
 static void on_click_atom(int iw, int atom)
 {
@@ -93,20 +93,8 @@ static void on_new(int iw)
 
 static int update_atoms_structure(PyObject *pyat)
 {
-  int i,j,lookup[3];
-  PyObject *n = NULL, *data = NULL, *lattice = NULL, *properties = NULL, *items = NULL, 
-    *item = NULL, *key = NULL, *value = NULL,
-    *intsize = NULL, *realsize = NULL, *strsize = NULL, *logicalsize = NULL,
-    *p = NULL, *valuetuple = NULL,
-    *intarray = NULL, *realarray = NULL, *strarray = NULL, *logicalarray = NULL;
-
-  atomeye_atoms->n_param = 0;
-
-  /* atoms.data - quippy.Table or compatible type */
-  if ((data = PyObject_GetAttrString(pyat, "data")) == NULL) {
-    PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.data");
-    goto fail;    
-  }
+  int i,j;
+  PyObject *n = NULL, *lattice = NULL, *properties = NULL, *fpointer = NULL;
 
   /* atoms.n - int */
   if ((n = PyObject_GetAttrString(pyat, "n")) == NULL) {
@@ -117,92 +105,31 @@ static int update_atoms_structure(PyObject *pyat)
     PyErr_SetString(PyExc_TypeError, "atoms.n must be an integer");
     goto fail;
   }
-  atomeye_atoms->n_atom = (size_t)PyInt_AsLong(n);
+  atomeye_atoms.n_atom = (int)PyInt_AsLong(n);
 
-  /* atoms.data.intsize - int */
-  if ((intsize = PyObject_GetAttrString(data, "intsize")) == NULL) {
-    PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.data.intsize");
-    goto fail;
-  }
-  atomeye_atoms->n_int = (int)PyInt_AsLong(intsize);
-  
-  /* atoms.data.realsize - int */
-  if ((realsize = PyObject_GetAttrString(data, "realsize")) == NULL) {
-    PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.data.realsize");
-    goto fail;
-  }
-  atomeye_atoms->n_real = (int)PyInt_AsLong(realsize);
-
-  /* atoms.data.strsize - int */
-  if ((strsize = PyObject_GetAttrString(data, "strsize")) == NULL) {
-    PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.data.strsize");
-    goto fail;
-  }
-  atomeye_atoms->n_str = (int)PyInt_AsLong(strsize);
-
-  /* atoms.data.logicalsize - int */
-  if ((logicalsize = PyObject_GetAttrString(data, "logicalsize")) == NULL) {
-    PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.data.logicalsize");
-    goto fail;
-  }
-  atomeye_atoms->n_logical = (int)PyInt_AsLong(logicalsize);
-
-  /* atoms.properties  - quippy.Dictionary or compatible type */
+  /* atoms.properties._fpointer */
   if ((properties = PyObject_GetAttrString(pyat, "properties")) == NULL) {
     PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.properties");
     goto fail;
   }
-  if (!PyMapping_Check(properties)) {
-    PyErr_SetString(PyExc_TypeError, "atoms.properties must be a mapping type");
+  if ((fpointer = PyObject_GetAttrString(properties, "_fpointer")) == NULL) {
+    PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.properties._fpointer");
     goto fail;
   }
-  atomeye_atoms->n_property = (int)PyMapping_Size(properties);
-
-  if ((items = PyMapping_Items(properties)) == NULL) {
-    PyErr_SetString(PyExc_TypeError, "Cannot get items from atoms.properties");
+  if (PyArray_NDIM(fpointer) != 1) {
+    PyErr_SetString(PyExc_ValueError, "atoms.properties._fpointer must have 1 dimension");
     goto fail;
   }
-
-  for (i=0; i< atomeye_atoms->n_property; i++) {
-    if ((item = PySequence_GetItem(items, i)) == NULL) {
-      PyErr_SetString(PyExc_ValueError, "Error getting item from atoms.properties.items()");
-      goto fail;
-    }
-    key = PySequence_GetItem(item, 0);
-    value = PySequence_GetItem(item, 1);
-    valuetuple = PySequence_Tuple(value);
-    
-    if(!PyString_Check(key)) {
-      PyErr_SetString(PyExc_TypeError, "Keys in atoms.proeprtiees.keys() must be of string type");
-      goto fail;
-    }
-
-    if (!PySequence_Check(value)) {
-      PyErr_SetString(PyExc_TypeError, "Values in atoms.properties.values() must be of sequence type");
-      goto fail;
-    }
-
-    if (PySequence_Size(value) != 3) {
-      PyErr_SetString(PyExc_ValueError, "Values in atoms.properties.values() must be of length 3.");
-      goto fail;
-    }
-
-    for (j=0; j<3; j++) {
-      p = PySequence_GetItem(valuetuple, j);
-      lookup[j] = PyInt_AsLong(p);
-      if (lookup[j] == -1) goto fail;
-      Py_DECREF(p);
-    }
-    strcpy(atomeye_atoms->property_name[i], PyString_AsString(key));
-    atomeye_atoms->property_type[i] = lookup[0];
-    atomeye_atoms->property_start[i] = lookup[1]-1;
-    atomeye_atoms->property_ncols[i] = lookup[2]-lookup[1]+1;
-
-    Py_DECREF(key);
-    Py_DECREF(value);
-    Py_DECREF(valuetuple);
-    Py_DECREF(item);
+  if (PyArray_DIM(fpointer, 0) != SIZEOF_FORTRAN_T) {
+    PyErr_SetString(PyExc_ValueError, "atoms.properties._fpointer must have shape (SIZEOF_FORTRAN_T,)");
+    goto fail;
   }
+  if (PyArray_TYPE(fpointer) != NPY_INT) {
+    PyErr_SetString(PyExc_ValueError, "atoms.properties._fpointer must have type int");
+    goto fail;
+  }
+  for (i=0; i < SIZEOF_FORTRAN_T; i++)
+    atomeye_atoms.properties[i] = ((int*)PyArray_DATA(fpointer))[i];
 
   /* atoms.lattice */
   if ((lattice = PyObject_GetAttrString(pyat, "lattice")) == NULL) {
@@ -223,147 +150,19 @@ static int update_atoms_structure(PyObject *pyat)
   }
   for (i=0; i<3; i++)
     for (j=0; j<3; j++)
-      atomeye_atoms->lattice[i][j] = *(double *)PyArray_GETPTR2(lattice, i, j);
-
-  /* atoms.data.int */
-  if (atomeye_atoms->n_int > 0) {
-    if ((intarray = PyObject_GetAttrString(data, "int")) == NULL) {
-      PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.data.int");
-      goto fail;
-    }
-    if (PyArray_NDIM(intarray) != 2) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.int must have 2 dimensions");
-      goto fail;
-    }
-    if (PyArray_DIM(intarray, 0) != atomeye_atoms->n_int || PyArray_DIM(intarray, 1) != atomeye_atoms->n_atom) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.int must have shape (atoms.data.intsize,atoms.n)");
-      goto fail;
-    }
-    if (PyArray_TYPE(intarray) != NPY_INT) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.int must have type int");
-      goto fail;
-    }
-    if (!PyArray_ISFORTRAN(intarray)) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.int must be Fortran-contigous");
-      goto fail;
-    }
-    atomeye_atoms->int_data = PyArray_DATA(intarray);
-  } else
-    atomeye_atoms->int_data = NULL;
-
-  /* atoms.data.real */
-  if (atomeye_atoms->n_real > 0) {
-    if ((realarray = PyObject_GetAttrString(data, "real")) == NULL) {
-      PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.data.real");
-      goto fail;
-    }
-    if (PyArray_NDIM(realarray) != 2) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.real must have 2 dimensions");
-      goto fail;
-    }
-    if (PyArray_DIM(realarray, 0) != atomeye_atoms->n_real || PyArray_DIM(realarray, 1) != atomeye_atoms->n_atom) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.real must have shape (atoms.data.realsize,atoms.n)");
-      goto fail;
-    }
-    if (PyArray_TYPE(realarray) != NPY_DOUBLE) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.real must have type real");
-      goto fail;
-    }
-    if (!PyArray_ISFORTRAN(realarray)) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.real must be Fortran-contigous");
-      goto fail;
-    }
-    atomeye_atoms->real_data = PyArray_DATA(realarray);
-  } else
-    atomeye_atoms->real_data = NULL;
-
-  /* atoms.data.str */
-  if (atomeye_atoms->n_str > 0) {
-    if ((strarray = PyObject_GetAttrString(data, "str")) == NULL) {
-      PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.data.str");
-      goto fail;
-    }
-    if (PyArray_NDIM(strarray) != 3) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.str must have 3 dimensions");
-      goto fail;
-    }
-    if (PyArray_DIM(strarray, 0) != PROPERTY_STRING_LENGTH ||
-	PyArray_DIM(strarray, 1) != atomeye_atoms->n_str || 
-	PyArray_DIM(strarray, 2) != atomeye_atoms->n_atom) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.str must have shape (atoms.data.strsize,atoms.n)");
-      goto fail;
-    }
-    if (PyArray_TYPE(strarray) != NPY_STRING) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.str must have type str");
-      goto fail;
-    }
-    if (!PyArray_ISFORTRAN(strarray)) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.str must be Fortran-contigous");
-      goto fail;
-    }
-    atomeye_atoms->str_data = PyArray_DATA(strarray);
-  } else
-    atomeye_atoms->str_data = NULL;
-
-  /* atoms.data.logical */
-  if (atomeye_atoms->n_logical > 0) {
-    if ((logicalarray = PyObject_GetAttrString(data, "logical")) == NULL) {
-      PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.data.logical");
-      goto fail;
-    }
-    if (PyArray_NDIM(logicalarray) != 2) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.logical must have 2 dimensions");
-      goto fail;
-    }
-    if (PyArray_DIM(logicalarray, 0) != atomeye_atoms->n_logical || PyArray_DIM(logicalarray, 1) != atomeye_atoms->n_atom) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.logical must have shape (atoms.data.logicalsize,atoms.n)");
-      goto fail;
-    }
-    if (PyArray_TYPE(logicalarray) != NPY_BOOL && PyArray_TYPE(logicalarray) != NPY_INT) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.logical must have type logical or type int");
-      goto fail;
-    }
-    if (!PyArray_ISFORTRAN(logicalarray)) {
-      PyErr_SetString(PyExc_ValueError, "atoms.data.logical must be Fortran-contigous");
-      goto fail;
-    }
-    atomeye_atoms->logical_data = PyArray_DATA(logicalarray);
-  } else
-    atomeye_atoms->logical_data = NULL;
+      atomeye_atoms.lattice[i][j] = *(double *)PyArray_GETPTR2(lattice, i, j);
 
   Py_DECREF(n);                       
-  Py_DECREF(data);
-  Py_DECREF(intsize);
-  Py_DECREF(realsize);
-  Py_DECREF(strsize);
-  Py_DECREF(logicalsize);
   Py_DECREF(properties);
-  Py_DECREF(items);
+  Py_DECREF(fpointer);
   Py_DECREF(lattice);
-  Py_XDECREF(intarray);
-  Py_XDECREF(realarray);
-  Py_XDECREF(strarray);
-  Py_XDECREF(logicalarray);
   return 1;
 
  fail:
-  Py_XDECREF(n);                       
-  Py_XDECREF(data);
-  Py_XDECREF(intsize);
-  Py_XDECREF(realsize);
-  Py_XDECREF(strsize);
-  Py_XDECREF(logicalsize);
-  Py_XDECREF(properties);
-  Py_XDECREF(items);
-  Py_XDECREF(intarray);
-  Py_XDECREF(realarray);
-  Py_XDECREF(strarray);
-  Py_XDECREF(logicalarray);
-  Py_XDECREF(lattice);
-  Py_XDECREF(key);
-  Py_XDECREF(value);
-  Py_XDECREF(valuetuple);
-  Py_XDECREF(item);
+  Py_DECREF(n);                       
+  Py_DECREF(properties);
+  Py_DECREF(fpointer);
+  Py_DECREF(lattice);
   return 0;
 }
 
@@ -384,10 +183,6 @@ atomeye_open_window(PyObject *self, PyObject *args)
     return NULL;
 
   if (!atomeye_initialised) {
-    atomeye_atoms = malloc(sizeof(Atoms));  // Who will free this structure?
-    if (atomeye_atoms == NULL) return 0;
-    atoms_init(atomeye_atoms);
-
     argv[0] = (char *)malloc(20);
     argv[1] = (char *)malloc(20);
     strcpy(argv[0], "A");
@@ -400,7 +195,7 @@ atomeye_open_window(PyObject *self, PyObject *args)
   
     if (pyat != NULL && pyat != Py_None) {
       if (!update_atoms_structure(pyat)) return NULL;
-      atomeyelib_init(argc, argv, (void *)atomeye_atoms);
+      atomeyelib_init(argc, argv, &atomeye_atoms);
     } else
       atomeyelib_init(argc, argv, NULL);
 
@@ -520,7 +315,7 @@ atomeye_load_atoms(PyObject *self, PyObject *args)
   
   if (!update_atoms_structure(pyat)) return NULL;
 
-  if (!atomeyelib_queueevent(iw, ATOMEYELIB_LOAD_ATOMS, title, (void *)atomeye_atoms, outstr)) {
+  if (!atomeyelib_queueevent(iw, ATOMEYELIB_LOAD_ATOMS, title, &atomeye_atoms, outstr)) {
     PyErr_SetString(PyExc_RuntimeError, outstr);    
     return NULL;
   }

@@ -2804,17 +2804,17 @@ void Config_load_libatoms(fortran_t *params, fortran_t *properties, double latti
   void *data;
 
   Config_free_auxiliary();
+
+  Fprintf(info, "Config_load_libatoms: got %d atoms\n", n_atom);
   
   *np = n_atom;
+  // Reallocate to correct size
+  Config_realloc (Config_Alib_to_Alib);
 
   for (i=0; i<3; i++)
     for (j=0; j<3; j++)
       H[i][j] = lattice[j][i];
   M3inv (H,g);
-
-  // Reallocate to correct size
-  Fprintf(info, "Config_load_libatoms: got %d atoms\n", *np);
-  Config_realloc (Config_Alib_to_Alib);
 
   // No velocities
   for (n=0; n < *np; n++)

@@ -66,6 +66,7 @@ atomeye_libs = ['m', 'Xpm', 'Xext', 'X11', 'mpi', 'png', 'z', 'jpeg', 'history',
 atomeye_libdirs = [ f[2:] for f in syslibs if f.startswith('-L') ]
 atomeye_extra_link_args = [ f for f in syslibs if not f.startswith('-l') and not f.startswith('-L')]
 
+quip_root_dir = os.environ['QUIP_ROOT']
 
 setup(name='atomeye',
       py_modules = ['atomeye'],
@@ -73,7 +74,7 @@ setup(name='atomeye',
                                sources=['atomeyemodule.c'],
                                library_dirs=atomeye_libdirs + [os.path.join(atomeye_dir, 'lib')],
                                libraries=['AtomEye', 'AX', 'Atoms', 'VecMat3', 'VecMat', 'IO', 'Scalar', 'Timer'] + atomeye_libs,
-                               include_dirs=[os.path.join(atomeye_dir,'include')],
+                               include_dirs=[os.path.join(atomeye_dir,'include'), os.path.join(quip_root_dir,'libAtoms')],
                                define_macros=[],
                                extra_link_args=atomeye_extra_link_args,
                                depends=[os.path.join(atomeye_dir, 'lib/libAtomEye.a')])

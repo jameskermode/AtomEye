@@ -9,7 +9,7 @@ ifeq (${HAVE_QUIP},1)
   CFLAGS += -fPIC -DHAVE_LIBATOMS
   FC = ${F77}
   LD = ${CC}
-  SYSLIBS += ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -lgfortran	
+  SYSLIBS += ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a /opt/local/lib/gcc44/libgfortran.a
 else
   SVN_VERSION := -D'SVN_VERSION="$(shell svnversion -n ..)"'
   CFLAGS += ${SVN_VERSION}

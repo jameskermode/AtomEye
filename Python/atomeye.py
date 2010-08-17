@@ -196,14 +196,9 @@ class AtomEyeView(object):
             self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
             self.is_quippy = True
         except AttributeError:
-            try:
-                self.atoms = convert_atoms_from_ase(self.atoms)
-                self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
-                self.is_quippy = False
-            except AttributeError:
-                self.atoms = convert_atoms_from_ase(self.atoms.to_ase())
-                self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
-                self.is_quippy = False                
+            self.atoms = convert_atoms_from_ase(self.atoms)
+            self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
+            self.is_quippy = False
                 
         views[self._window_id] = self
         while not self.is_alive:
@@ -312,18 +307,6 @@ class AtomEyeView(object):
                 self.atoms.add_property('_show', property)
                 property = '_show'
                 #raise NotImplementedError
-
-            # Make sure property we're looking at is in the first 48 columns, or it won't be available
-            if self.is_quippy and sum((self.atoms.data.intsize, self.atoms.data.realsize, self.atoms.data.logicalsize, self.atoms.data.strsize)) > ATOMEYE_MAX_AUX_PROPS:
-
-                col = 0
-                for p in self.atoms.properties:
-                    col += self.atoms.properties[p][3] - self.atoms.properties[p][2] + 1
-                    if p == property:
-                        break
-
-                if col >= ATOMEYE_MAX_AUX_PROPS:
-                    self.atoms.properties.swap(self.atoms.properties.keys()[2], property)
 
         if highlight is not None:
             #theat.add_property('highlight', False)
