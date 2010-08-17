@@ -9,6 +9,7 @@ ifeq (${HAVE_QUIP},1)
   CFLAGS += -fPIC
   FC = ${F77}
   LD = ${CC}
+  LIBATOMS=${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -lgfortran	
 else
   SVN_VERSION := -D'SVN_VERSION="$(shell svnversion -n ..)"'
   CFLAGS += ${SVN_VERSION}
@@ -19,7 +20,7 @@ export CC
 export FC
 export LD
 
-ATOMEYE_LIBS = -lm -lXpm -lXext -lX11 -lmpi -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl  ${SYSLIBS}
+ATOMEYE_LIBS = -lm -lXpm -lXext -lX11 -lmpi -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl ${LIBATOMS} ${SYSLIBS}
 export ATOMEYE_LIBS
 
 SUBDIRS = Timer IO Scalar VecMat Min VecMat3 Atoms AX
@@ -29,10 +30,6 @@ ALLSUBDIRS = ${SUBDIRS} A3
 .PHONY: all clean subdirs cleansubdirs atomeyelib
 
 subdirs:
-ifeq (${HAVE_QUIP},1)
-	-cp -f ${QUIP_ROOT}/libAtoms/xyz_netcdf.c Atoms/xyz_netcdf.c
-	-cp -f ${QUIP_ROOT}/libAtoms/xyz_netcdf.h Atoms/xyz_netcdf.h
-endif
 	for dir in ${SUBDIRS}; do \
 	  cp $$dir/*.h include; \
 	  $(MAKE) -C $$dir || exit 1; \
@@ -47,10 +44,6 @@ cleansubdirs:
 all: subdirs
 
 atomeyelib:
-ifeq (${HAVE_QUIP},1)
-	-cp -f ${QUIP_ROOT}/libAtoms/xyz_netcdf.c Atoms/xyz_netcdf.c
-	-cp -f ${QUIP_ROOT}/libAtoms/xyz_netcdf.h Atoms/xyz_netcdf.h
-endif
 	for dir in ${SUBDIRS}; do \
 	  cp $$dir/*.h include; \
 	  $(MAKE) -C $$dir ATOMEYE_LIB=-DATOMEYE_LIB || exit 1; \

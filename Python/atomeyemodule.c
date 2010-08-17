@@ -22,7 +22,7 @@
 
 #include "numpy/arrayobject.h"
 
-#include <xyz_netcdf.h>
+#include <libatoms.h>
 #include <atomeyelib.h>
 
 static char atomeye_doc[] = 

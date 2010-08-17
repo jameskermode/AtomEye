@@ -15,7 +15,7 @@
 
 #ifdef ATOMEYE_LIB
 #include "atomeyelib.h"
-#include "xyz_netcdf.h"
+#include "libatoms.h"
 #endif
 
 /* from libAtoms: */

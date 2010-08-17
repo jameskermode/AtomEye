@@ -5077,8 +5077,8 @@ renderer:
 /* API functions to be called from python */
 #ifdef ATOMEYE_LIB
 
-#include "xyz_netcdf.h"
 #include "atomeyelib.h"
+#include "libatoms.h"
 
 #define ATOMEYELIB_MAX_EVENTS 10
 #define ATOMEYELIB_STR_LEN 255

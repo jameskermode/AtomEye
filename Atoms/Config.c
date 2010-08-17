@@ -19,7 +19,7 @@
 #define ELEM_CHARGE 1.60217653e-19
 #define MASS_CONVERT 1.0e7 / (N_A * ELEM_CHARGE)
 
-#include <xyz_netcdf.h>
+#include "libatoms.h"
 
 
 /****************************************************/
@@ -2794,150 +2794,124 @@ int Config_Load (char *fname, FILE *info, Alib_Declare_Config)
     
 } /* end Config_Load() */
 
-Atoms *config_libatoms;
-
-/* Load atomistic configuration from libAtoms-compatible Atoms C structure */
-void Config_load_libatoms (Atoms *atoms, FILE *info, Alib_Declare_Config)
+void Config_load_libatoms(fortran_t *params, fortran_t *properties, double lattice[3][3], int n_atom, FILE *info, Alib_Declare_Config)
 {
   int i,n, entry_count,j,k, species_idx, pos_idx;
   M3 g;
   double x[3], sp[3];
-  int naux, mass_aux_index = -1;
+  int n_property, naux, mass_aux_index = -1;
+  char property_name[C_KEY_LEN];
+  int error = 0, type, shape[2];
+  void *data;
 
   Config_free_auxiliary();
   
-  *np = atoms->n_atom;
+  *np = n_atom;
 
   for (i=0; i<3; i++)
     for (j=0; j<3; j++)
-      H[i][j] = atoms->lattice[j][i];
+      H[i][j] = lattice[j][i];
   M3inv (H,g);
-
-  species_idx = atoms_find_property(atoms, "species");
-  if (species_idx == -1) pe("No species in atoms");
-  pos_idx = atoms_find_property(atoms, "pos");
-  if (pos_idx == -1) pe("No pos in atoms");
-
-  // swap species and pos to beginning to ensure they're not excluded
-  // if we have a lot of aux props
-  atoms_swap_properties(atoms, species_idx, 0);  species_idx = 0;
-  atoms_swap_properties(atoms, pos_idx, 1);      pos_idx = 1;
-
-  // Process rest of aux props
-  entry_count = 0;
-  for (i=0; i < atoms->n_property; i++) {
-    if (i == species_idx || i == pos_idx) continue;
-
-    if (atoms->property_type[i] == PROPERTY_STR) {
-      Fprintf(info, "warning: ignoring string property %s\n", atoms->property_name[i]);
-      continue;
-    }
-
-    if (strcmp(atoms->property_name[i], "mass") == 0 && 
-	atoms->property_type[i] == PROPERTY_REAL && 
-	atoms->property_ncols[i] == 1)
-      mass_aux_index = entry_count;
-
-    if (atoms->property_ncols[i] == 1) {
-      if (entry_count == CONFIG_MAX_AUXILIARY) {
-	Fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
-		CONFIG_MAX_AUXILIARY);
-	entry_count = CONFIG_MAX_AUXILIARY;
-	goto LA_AUX_PROPS_DONE;
-      }
-      strcpy(CONFIG_auxiliary_name[entry_count], atoms->property_name[i]);
-      entry_count++;
-    }
-    else {
-      for (j=0; j<atoms->property_ncols[i]; j++) {
-	if (entry_count == CONFIG_MAX_AUXILIARY) {
-	  Fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
-		  CONFIG_MAX_AUXILIARY);
-	  entry_count = CONFIG_MAX_AUXILIARY;
-	  goto LA_AUX_PROPS_DONE;
-	}
-	sprintf(CONFIG_auxiliary_name[entry_count], "%s%d", atoms->property_name[i], j);
-	entry_count++;
-      }
-      //TODO: add %s_mag aux prop here with magnitude of vector
-    }
-
-  }
-
- LA_AUX_PROPS_DONE:
-  entry_count += 4;  // For symbol and positions
-  Fprintf(info, "Config_load_libatoms: entry_count = %d\n", entry_count);
 
   // Reallocate to correct size
   Fprintf(info, "Config_load_libatoms: got %d atoms\n", *np);
   Config_realloc (Config_Alib_to_Alib);
 
-  // Allocate correct number of aux props
-  for (k=0; k<entry_count-4; k++)
-    REALLOC (Config_load, CONFIG_auxiliary[k], *np, double);
-  for (k=entry_count-4; k<CONFIG_num_auxiliary; k++)
-    {
-      Free (CONFIG_auxiliary[k]);
-      CONFIG_auxiliary_name[k][0] = EOS;
-      CONFIG_auxiliary_unit[k][0] = EOS;
-    }
-  CONFIG_num_auxiliary = entry_count-4;
+  // No velocities
+  for (n=0; n < *np; n++)
+    V3ZERO (&((*s1)[DIMENSION*n]));
 
-  for (n=0; n < *np; n++) {
+  // Process properties
+  CONFIG_num_auxiliary = 0;
+  dictionary_get_n(properties, &n_property);
+  error = ERROR_NONE;
+  for (i=1; i <= n_property; i++) {
+    dictionary_query_index(properties, &i, property_name, &type, shape, &data, &error, C_KEY_LEN);
+    if (error != ERROR_NONE) pe("error querying properties entry %d", i);
 
-    V3ZERO (&((*s1)[DIMENSION*n])); // No velocities
-    for (i=0; i<3; i++) {
-      x[i] = property_real(atoms, pos_idx, i, n);
-    }
-    V3mulM3(x,g,sp);                // Convert to fractional coordinates
-    (*s)[3*n] = sp[0]; (*s)[3*n+1] = sp[1]; (*s)[3*n+2] = sp[2];
-    //printf("%d (%f %f %f) (%f %f %f)\n", n, x[0], x[1], x[2], (*s)[3*n], (*s)[3*n+1], (*s)[3*n+2]);
-    safe_symbol(&property_str(atoms, species_idx, 0, n),SYMBOL(n));
+    // null-terminate the Fortran string
+    property_name[C_KEY_LEN-1] = '\0';
+    if (strchr(property_name, ' ') == NULL)
+      pe("property name %s not terminated with blank", property_name);
+    *strchr(property_name, ' ') = '\0';
 
-    // Auxiliary properties
-    naux = 0;
-    for (i=0; i<atoms->n_property; i++) {
-      if (i == species_idx || i == pos_idx) continue;
-
-      for (j=0; j < atoms->property_ncols[i]; j++) {
-	if (naux >= CONFIG_MAX_AUXILIARY) goto AUX_PROP_COPY_ABORT;
-	//printf("%s[%d,%d] type %d\n", atoms->property_name[i], n, j, atoms->property_type[i]);
-	switch (atoms->property_type[i]) {
-	case(PROPERTY_INT):
-	  *(CONFIG_auxiliary[naux]+n) = (double)property_int(atoms, i, j, n);
-	  naux++;
-	  break;
-	
-	case(PROPERTY_REAL):
-	  *(CONFIG_auxiliary[naux]+n) = property_real(atoms, i, j, n);
-	  naux++;
-	  break;
-
-	case(PROPERTY_LOGICAL):
-	  *(CONFIG_auxiliary[naux]+n) = (double)property_logical(atoms, i, j, n);
-	  naux++;
-	  break;
-
-	case(PROPERTY_STR):
-	  break;
-	}
+    // Positions
+    if (strcmp(property_name, "pos") == 0) {
+      for (n=0; n < *np; n++) {
+	// Convert to fractional coordinates
+	V3mulM3(&REAL_A2(data, shape, 0, n),g,sp);
+	(*s)[3*n]   = sp[0]; 
+	(*s)[3*n+1] = sp[1]; 
+	(*s)[3*n+2] = sp[2];
       }
+      continue;
     }
-  AUX_PROP_COPY_ABORT:
-    ;
+
+    // Species
+    if (strcmp(property_name, "species") == 0) {
+      for (n=0; n < *np; n++)
+	safe_symbol(&CHAR_A(data, shape, 0, n),SYMBOL(n));
+      continue;
+    }
+    
+    // Auxiliary properties
+    switch(type) {
+    case(T_REAL_A):
+    case(T_INTEGER_A):
+    case(T_LOGICAL_A):
+      if (CONFIG_num_auxiliary == CONFIG_MAX_AUXILIARY) {
+	Fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
+		CONFIG_MAX_AUXILIARY);
+	CONFIG_num_auxiliary = CONFIG_MAX_AUXILIARY;
+	goto LA_AUX_PROPS_DONE;
+      }
+      strcpy(CONFIG_auxiliary_name[CONFIG_num_auxiliary], property_name);
+      REALLOC (Config_load, CONFIG_auxiliary[CONFIG_num_auxiliary], *np, double);
+      
+      if (type == T_REAL_A)
+	memcpy(CONFIG_auxiliary[CONFIG_num_auxiliary], data, *np*sizeof(double));
+      else if (type == T_INTEGER_A || type == T_LOGICAL_A)
+	for (n=0; n<*np; n++)
+	  *(CONFIG_auxiliary[CONFIG_num_auxiliary]+n) = (double)INTEGER_A(data, n);
+
+      CONFIG_num_auxiliary++;
+      break;
+
+    case(T_INTEGER_A2):
+    case(T_REAL_A2):
+      for (j=0; j < shape[0]; j++) {
+	if (CONFIG_num_auxiliary == CONFIG_MAX_AUXILIARY) {
+	  Fprintf(info,"Config_load: Warning CONFIG_MAX_AUXILIARY = %d exceeded, skipping remaining properties\n", 
+		  CONFIG_MAX_AUXILIARY);
+	  CONFIG_num_auxiliary = CONFIG_MAX_AUXILIARY;
+	  goto LA_AUX_PROPS_DONE;
+	}
+	sprintf(CONFIG_auxiliary_name[CONFIG_num_auxiliary], "%s%d", property_name, j);
+	REALLOC (Config_load, CONFIG_auxiliary[CONFIG_num_auxiliary], *np, double);
+
+	if (type == T_REAL_A)
+	  for (n=0; n<*np; n++)
+	    *(CONFIG_auxiliary[CONFIG_num_auxiliary]+n) = REAL_A2(data, shape, j, n);
+	else if (type == T_INTEGER_A || type == T_LOGICAL_A)
+	  for (n=0; n<*np; n++)
+	    *(CONFIG_auxiliary[CONFIG_num_auxiliary]+n) = (double)INTEGER_A2(data, shape, j, n);
+
+	CONFIG_num_auxiliary++;
+      }
+      break;
+
+    case(T_CHAR_A):
+      break;
+
+    default:
+      pe("Unknown property type %d\n", type);
+    }
   }
 
-
-  // Set the mass, either from symbol or from mass aux prop if there is one
-  if (mass_aux_index == -1) {
-    for (i=0; i<*np; i++)
-      (*mass)[i] = ATOM_MASS_IN_AMU(Search_atom_by_symbol(SYMBOL(i)));
-  }
-  else {
-    // convert from libAtoms units to AtomEye units
-    for (i=0; i<*np; i++)
-      (*mass)[i] = *(CONFIG_auxiliary[mass_aux_index]+i)/(MASS_CONVERT*umass_IN_AMU);
-  }
+ LA_AUX_PROPS_DONE:
+  // Set the mass from symbol
+  for (i=0; i<*np; i++)
+    (*mass)[i] = ATOM_MASS_IN_AMU(Search_atom_by_symbol(SYMBOL(i)));
 
   return;
 } /* end Config_load_libatoms() */
@@ -2947,19 +2921,21 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
   char *p, *q, *framestr, *nfname, buf1[CFG_LINESIZE], buf2[CFG_LINESIZE], 
     buf3[CFG_LINESIZE], linebuffer[CFG_LINESIZE];
   int netcdf, xyz, gotfilter;
-  int n_frame, i;
+  int n_frame, n_atom, n_label, n_string, i;
   static int frame;
-  Atoms at;
-  int *atomlist, natomlist;  
-  int offset, nc_in;
-  FILE *fxyz, *atomfile;
-  int retval, inc;
-
-  atoms_init(&at);
+  static int system_initialised = 0;
+  fortran_t params[SIZEOF_FORTRAN_T], properties[SIZEOF_FORTRAN_T];
+  double lattice[3][3];
+  int offset, inc,  error, silent, range[2];
 
   xyz = 0;
   netcdf = 0;
   offset = 0;
+  error = 0;
+  silent = -1;
+  if (!system_initialised) system_initialise(&silent);
+  dictionary_initialise(params);
+  dictionary_initialise(properties);
     
   p = strrchr(fname, '/');
   if (p == NULL) p = fname;
@@ -2980,47 +2956,13 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
     framestr = buf2;
   }
 
-  atomlist = NULL;
-  natomlist = 0;
-
-  strcpy(buf3,nfname);
-  strcat(buf3,".filter");
-  gotfilter = ((atomfile = fopen(buf3,"r")) != NULL);
-
-  if (gotfilter) {
-    natomlist = 0;  // Count lines in atomlist file
-    while (fgets(linebuffer,LINESIZE,atomfile)) natomlist++;
-      
-    atomlist = malloc(natomlist*sizeof(int));
-    if (atomlist == NULL) pe("Error allocating atomlist");
-    fseek(atomfile, 0, SEEK_SET);
-    for (i=0; i<natomlist; i++) {
-      if (!fgets(linebuffer,LINESIZE,atomfile)) pe("Premature end of atom file");
-      if (sscanf(linebuffer, "%d", &atomlist[i]) != 1) pe("Error reading line %d of atom list: %s", i+1, linebuffer);
-      atomlist[i] -= offset;
-    }
-    fclose(atomfile);
-  }
-
-  if (xyz) {
-    n_frame = xyz_find_frames(nfname, &(at.frames), &(at.atoms), &(at.frames_array_size));
-    if (n_frame == 0) pe("Error building frame index");
-    Fprintf(stderr, "got xyz file with %d frames\n", n_frame);
-    at.got_index = 1;
-  }
-  else {
-    Fprintf(info, "Opening netcdf file %s\n", nfname);
-#ifdef NETCDF4
-    netcdf_check(nc_open(nfname, NC_NOWRITE, &nc_in));
-#else
-    netcdf_check(nc_open(nfname, NC_64BIT_OFFSET | NC_NOWRITE, &nc_in));
-#endif
-    n_frame = read_netcdf(nc_in, &at, 0, atomlist, natomlist, 1, 0, 1, 1, 0, 0.0);
-    Fprintf(stderr, "got netcdf file with %d frames\n", n_frame);
-    if (n_frame == 0) pe("Error reading netcdf");
-    at.got_index = 1;
-  }
-
+  // Query file to find number of frames
+  if (xyz)
+    query_xyz(nfname, 1, 0, &n_frame, &n_atom,  &error);
+  else
+    query_netcdf(nfname,  &n_frame, &n_atom, &n_label, &n_string, &error);
+  if (error != ERROR_NONE) pe("error occured querying file %s", nfname);
+  
   if (sscanf(framestr, "%d", &frame) == 1) {
     // Check frame is in range
     if ((frame < 0) || (frame >= n_frame)) {
@@ -3047,20 +2989,19 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
     pe("Config_load_libatoms_filename: unknown framestr %s\n", framestr);
   }
 
-  if (xyz) {
-    if ((fxyz = fopen(nfname, "r")) == NULL) pe("Cannot open xyz file %s.\n", nfname);
-    if (!read_xyz(fxyz, &at, atomlist, natomlist, frame, 0, 0, 1, 0, 0, NULL)) 
-      pe("Error reading frame %d from xyz file %s.\n", frame, nfname);
-    fclose(fxyz);
-  }
-  else {
-    if (!read_netcdf(nc_in, &at, frame, atomlist, natomlist, 0, 0, 1, 1, 0, 0.0))
-      pe("Error reading frame %d from netcdf file %s.\n", frame, nfname);
-    nc_close(nc_in);
-  }
+  // Read all atoms 1..n_atom
+  range[0] = 0; range[1] = 0;
 
-  Config_load_libatoms(&at, info, Config_Alib_to_Alib);
-  atoms_free(&at);
+  // Read the file into params, properties dictionaries
+  if (xyz)
+    read_xyz(nfname, params, properties, NULL, lattice, &n_atom, frame, 1, range, 0, 0, &error);
+  else
+    read_netcdf(nfname, params, properties, NULL, lattice, &n_atom, frame, 1, range, 0, 0.0, &error);
+  if (error != ERROR_NONE) pe("error reading from  file %s", nfname);
+
+  Config_load_libatoms(params, properties, lattice, n_atom, info, Config_Alib_to_Alib);
+  dictionary_finalise(params);
+  dictionary_finalise(properties);
 
   strcpy(fname, nfname);
   sprintf(buf2, ":%%0%dd", (int)ceil(log10(n_frame)));

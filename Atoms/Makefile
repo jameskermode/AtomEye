@@ -9,7 +9,7 @@
 #################################################
 
 LIB = Atoms
-HEADERS = NIST.h ${LIB}.h  xyz_netcdf.h # plural
+HEADERS = NIST.h ${LIB}.h # plural
 STATIC_LIB_FILE = lib${LIB}.a
 PROGS = mul iniT punchcylinder vcut trans scut voronoirize \
 	label_immobile c2p p2c cfg2xyz xtal vasp2cfg vasp2out cfg2vasp \
@@ -17,7 +17,7 @@ PROGS = mul iniT punchcylinder vcut trans scut voronoirize \
 	cfg2dacapo annotate_atomic_strain affine_deform linear_path \
 	period_reduce infectH concat div
 OBJS = ${LIB}.o Config.o Neighborlist.o Gr.o Motion.o Voronoi.o \
-	VASP.o Gaussian.o Dacapo.o LeastSquareStrain.o ChainofStates.o xyz_netcdf.o # plural
+	VASP.o Gaussian.o Dacapo.o LeastSquareStrain.o ChainofStates.o # plural
 SRCS = $(addsuffix .c, $(basename ${OBJS}))
 GDBTMP = /tmp/${LIB}.gdb
 EXESUFFIX =
