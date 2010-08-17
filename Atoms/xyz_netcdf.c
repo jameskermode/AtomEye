@@ -1,1 +1,0 @@
-/Users/jameskermode/Code/QUIP/Tools/AtomEye/../../libAtoms/xyz_netcdf.c
