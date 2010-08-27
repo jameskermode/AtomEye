@@ -56,3 +56,7 @@ clean: cleansubdirs
 AtomEye.app: all
 	cp -r AtomEye.app.template AtomEye.app
 	cp bin/A AtomEye.app/Contents/MacOS/A
+
+install: all
+	cp bin/A ${HOME}/bin
+	[[ -d AtomEye.app ]] && cp -r AtomEye.app /Applications
