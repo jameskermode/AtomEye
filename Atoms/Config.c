@@ -2988,9 +2988,11 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
   // Read all atoms 1..n_atom
   range[0] = 0; range[1] = 0;
 
+  Fprintf(info, "Config_load_libatoms_filename: reading from \"%s\" frame %d\n", nfname, frame);
+
   // Read the file into params, properties dictionaries
   if (xyz)
-    read_xyz(nfname, params, properties, NULL, lattice, &n_atom, frame, 1, range, 0, 0, &error);
+    read_xyz(nfname, params, properties, NULL, lattice, &n_atom, 1, frame, range, 0, 0, &error);
   else
     read_netcdf(nfname, params, properties, NULL, lattice, &n_atom, frame, 1, range, 0, 0.0, &error);
   if (error != ERROR_NONE) pe("error reading from  file %s", nfname);
