@@ -2800,7 +2800,7 @@ void Config_load_libatoms(fortran_t *params, fortran_t *properties, double latti
   double x[3], sp[3];
   int n_property, naux, mass_aux_index = -1;
   char property_name[C_KEY_LEN];
-  int error = 0, type, shape[2];
+  int error = 0, type, shape[2], have_atom_types;
   void *data;
 
   Config_free_auxiliary();
@@ -2824,6 +2824,7 @@ void Config_load_libatoms(fortran_t *params, fortran_t *properties, double latti
   CONFIG_num_auxiliary = 0;
   dictionary_get_n(properties, &n_property);
   error = ERROR_NONE;
+  have_atom_types = 0;
   for (i=1; i <= n_property; i++) {
     dictionary_query_index(properties, &i, property_name, &type, shape, &data, &error, C_KEY_LEN);
     if (error != ERROR_NONE) pe("error querying properties entry %d", i);
@@ -2846,13 +2847,20 @@ void Config_load_libatoms(fortran_t *params, fortran_t *properties, double latti
       continue;
     }
 
+    // Z
+    if (strcmp(property_name, "Z") == 0) {
+      for (n=0; n < *np; n++)
+	safe_symbol(ATOM_SYMBOL(INTEGER_A(data, n)),SYMBOL(n));
+      have_atom_types = 1;
+    }
+
     // Species
     if (strcmp(property_name, "species") == 0) {
       for (n=0; n < *np; n++)
 	safe_symbol(&CHAR_A(data, shape, 0, n),SYMBOL(n));
-      continue;
+      have_atom_types = 1;
     }
-    
+
     // Auxiliary properties
     switch(type) {
     case(T_REAL_A):
@@ -2908,6 +2916,11 @@ void Config_load_libatoms(fortran_t *params, fortran_t *properties, double latti
   }
 
  LA_AUX_PROPS_DONE:
+  // Do we know the atom type?
+  if (!have_atom_types) {
+    pe("Could not identify atom types. NetCDF file contains neither 'species' nor 'Z' field.");
+  }
+
   // Set the mass from symbol
   for (i=0; i<*np; i++)
     (*mass)[i] = ATOM_MASS_IN_AMU(Search_atom_by_symbol(SYMBOL(i)));
@@ -2957,7 +2970,7 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
     query_xyz(nfname, 1, 0, &n_frame, &n_atom,  &error);
   else
     query_netcdf(nfname,  &n_frame, &n_atom, &n_label, &n_string, &error);
-  if (error != ERROR_NONE) pe("error occured querying file %s", nfname);
+  if (error != ERROR_NONE) c_error_abort_(NULL); //pe("error occured querying file %s", nfname);
   
   if (sscanf(framestr, "%d", &frame) == 1) {
     // Check frame is in range
@@ -2995,7 +3008,7 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
     read_xyz(nfname, params, properties, NULL, lattice, &n_atom, 1, frame, range, 0, 0, &error);
   else
     read_netcdf(nfname, params, properties, NULL, lattice, &n_atom, frame, 1, range, 0, 0.0, &error);
-  if (error != ERROR_NONE) pe("error reading from  file %s", nfname);
+  if (error != ERROR_NONE) c_error_abort_(NULL); //pe("error reading from  file %s", nfname);
 
   Config_load_libatoms(params, properties, lattice, n_atom, info, Config_Alib_to_Alib);
   dictionary_finalise(params);
