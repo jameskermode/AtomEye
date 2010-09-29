@@ -2896,10 +2896,10 @@ void Config_load_libatoms(fortran_t *params, fortran_t *properties, double latti
 	sprintf(CONFIG_auxiliary_name[CONFIG_num_auxiliary], "%s%d", property_name, j);
 	REALLOC (Config_load, CONFIG_auxiliary[CONFIG_num_auxiliary], *np, double);
 
-	if (type == T_REAL_A)
+	if (type == T_REAL_A2)
 	  for (n=0; n<*np; n++)
 	    *(CONFIG_auxiliary[CONFIG_num_auxiliary]+n) = REAL_A2(data, shape, j, n);
-	else if (type == T_INTEGER_A || type == T_LOGICAL_A)
+	else if (type == T_INTEGER_A2)
 	  for (n=0; n<*np; n++)
 	    *(CONFIG_auxiliary[CONFIG_num_auxiliary]+n) = (double)INTEGER_A2(data, shape, j, n);
 
