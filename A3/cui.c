@@ -5566,7 +5566,7 @@ int atomeyelib_load_libatoms(int iw, Atomeyelib_atoms *atoms, char *title, char 
     if (n[iw].arrow_mode)
       Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
 			  n[iw].arrow_head_height, n[iw].arrow_head_width, 
-			  n[iw].arrow_up);
+			  n[iw].arrow_up, n[iw].arrow_overlay);
 
     //    strcpy(fbasename,title);
 
