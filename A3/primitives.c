@@ -57,12 +57,36 @@ void Config_to_3D_Bonds (double bond_radius)
 
 
 /* Allocate arrows */
-void Config_to_3D_Arrows(int arrow_idx, double scale_factor, double head_height, double head_width, double up[3])
+void Config_to_3D_Arrows(int arrow_idx, double scale_factor, double head_height, double head_width, double up[3], int overlay)
 {
-  register int i, j;
+  register int i, j, offset;
   double dx[3], head[3], head1[3], perp[3], perp2[3], sum;
+  AX_3D_Lines tmp_arrows[1] = {{0}};
+  tmp_arrows[0].LINE = NULL;
 
-  AX_3D_Lines_Realloc(arrows, 3*np);
+  if (overlay) {
+    offset = arrows->n_lines;
+    if (offset != 0) {
+      AX_3D_Lines_Realloc(tmp_arrows, arrows->n_lines);
+      for (i=0; i<arrows->n_lines; i++) {
+	V3EQV(arrows->LINE[i].x0, tmp_arrows->LINE[i].x0);
+	V3EQV(arrows->LINE[i].x1, tmp_arrows->LINE[i].x1);
+	AX_3D_AssignRGB (tmp_arrows->LINE[i], arrows->LINE[i].r,  arrows->LINE[i].g,  arrows->LINE[i].b);
+      }
+    }
+    AX_3D_Lines_Realloc(arrows, arrows->n_lines + 3*np);
+    if (offset != 0) {
+      for (i=0; i<tmp_arrows->n_lines; i++) {
+	V3EQV(tmp_arrows->LINE[i].x0, arrows->LINE[i].x0);
+	V3EQV(tmp_arrows->LINE[i].x1, arrows->LINE[i].x1);
+	AX_3D_AssignRGB (arrows->LINE[i], tmp_arrows->LINE[i].r,  tmp_arrows->LINE[i].g,  tmp_arrows->LINE[i].b);
+      }
+      AX_3D_Lines_Free(tmp_arrows);
+    }
+  } else {
+    AX_3D_Lines_Realloc(arrows, 3*np);
+    offset = 0;
+  }
   
   /* auto scale */
   if (scale_factor == 0.0) {
@@ -81,9 +105,9 @@ void Config_to_3D_Arrows(int arrow_idx, double scale_factor, double head_height,
   for (i=0; i<np; i++)
   {
     /* Todo - colour lines ? */
-    AX_3D_AssignRGB (arrows->LINE[3*i],   0.0, 0.0, 0.0);
-    AX_3D_AssignRGB (arrows->LINE[3*i+1], 0.0, 0.0, 0.0);
-    AX_3D_AssignRGB (arrows->LINE[3*i+2], 0.0, 0.0, 0.0);
+    AX_3D_AssignRGB (arrows->LINE[offset+3*i],   0.0, 0.0, 0.0);
+    AX_3D_AssignRGB (arrows->LINE[offset+3*i+1], 0.0, 0.0, 0.0);
+    AX_3D_AssignRGB (arrows->LINE[offset+3*i+2], 0.0, 0.0, 0.0);
 
     dx[0] = *(CONFIG_auxiliary[arrow_idx+0]+i)*scale_factor;
     dx[1] = *(CONFIG_auxiliary[arrow_idx+1]+i)*scale_factor;
@@ -91,16 +115,16 @@ void Config_to_3D_Arrows(int arrow_idx, double scale_factor, double head_height,
 
     if (V3EQZERO(dx)) {
       for (j=0; j<3; j++) {
-	V3EQV(B->BALL[i].x, arrows->LINE[3*i+j].x0);
-	V3EQV(B->BALL[i].x, arrows->LINE[3*i+j].x1);
+	V3EQV(B->BALL[i].x, arrows->LINE[offset+3*i+j].x0);
+	V3EQV(B->BALL[i].x, arrows->LINE[offset+3*i+j].x1);
       }
       
     } else {
       V3ADD(B->BALL[i].x, dx, head);
-      V3EQV(B->BALL[i].x, arrows->LINE[3*i+0].x0);
-      V3EQV(head, arrows->LINE[3*i+0].x1);
-      V3EQV(head, arrows->LINE[3*i+1].x0);
-      V3EQV(head, arrows->LINE[3*i+2].x0);
+      V3EQV(B->BALL[i].x, arrows->LINE[offset+3*i+0].x0);
+      V3EQV(head, arrows->LINE[offset+3*i+0].x1);
+      V3EQV(head, arrows->LINE[offset+3*i+1].x0);
+      V3EQV(head, arrows->LINE[offset+3*i+2].x0);
 
       V3CROSS(dx, up, perp2);
 
@@ -116,8 +140,8 @@ void Config_to_3D_Arrows(int arrow_idx, double scale_factor, double head_height,
       V3mul(head_height,head1,head1);
       V3SUB(head,head1,head1);
     
-      V3ADD(head1,perp,arrows->LINE[3*i+1].x1);
-      V3SUB(head1,perp,arrows->LINE[3*i+2].x1);
+      V3ADD(head1,perp,arrows->LINE[offset+3*i+1].x1);
+      V3SUB(head1,perp,arrows->LINE[offset+3*i+2].x1);
     }
   }
 }

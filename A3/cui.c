@@ -768,6 +768,7 @@ static struct isvt {
     NAVI(v3, arrow_up[0]),		   /* up vector for arrow heads. heads are drawn in the plane defined by their direction and this vector */
     NAVI(v3, arrow_up[1]),		   
     NAVI(v3, arrow_up[2]),
+    NAVI(int, arrow_overlay),
 
     AX3D(v3, x), /* coordinates of the viewpoint */
     AX3D(double, k), /* conversion factor from radian to window pixels*/
@@ -1588,6 +1589,9 @@ static bool proc_draw_arrows(int iw, char *instr, char **outstr)
   
     if (instr && strcmp(instr, "off") == 0) {
       n[iw].arrow_mode = FALSE;
+      AX_3D_Lines_Free(arrows);
+      arrows[0].n_lines = 0;
+      arrows[0].LINE = NULL;
       *outstr = NULL;
       return TRUE;
     }
@@ -1672,7 +1676,7 @@ static bool proc_draw_arrows(int iw, char *instr, char **outstr)
 	n[iw].arrow_mode = TRUE;
 	Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
 			    n[iw].arrow_head_height, n[iw].arrow_head_width, 
-			    n[iw].arrow_up);
+			    n[iw].arrow_up, n[iw].arrow_overlay);
 
         return TRUE;
     }
@@ -2889,7 +2893,7 @@ static bool proc_load_config(int iw, char *instr, char **outstr)
     if (n[iw].arrow_mode)
       Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
 			  n[iw].arrow_head_height, n[iw].arrow_head_width, 
-			  n[iw].arrow_up);
+			  n[iw].arrow_up, n[iw].arrow_overlay);
 
     select_fbasename (config_fname);
     if ((n[iw].xtal_mode) && (n[iw].color_mode == COLOR_MODE_COORD))

@@ -837,6 +837,7 @@ void thread_start (void *icopy)
 	n[iw].arrow_scale_factor = 0.0;
 	n[iw].arrow_head_height = 0.1;
 	n[iw].arrow_head_width = 0.05;
+	n[iw].arrow_overlay = 0;
 	V3ASSIGN(0.0,1.0,0.0, n[iw].arrow_up);
     }
     AXSETICON(iw);
