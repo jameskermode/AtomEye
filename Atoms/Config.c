@@ -2813,7 +2813,7 @@ void Config_load_libatoms(fortran_t *params, fortran_t *properties, double latti
 
   for (i=0; i<3; i++)
     for (j=0; j<3; j++)
-      H[i][j] = lattice[j][i];
+      H[i][j] = lattice[i][j];
   M3inv (H,g);
 
   // No velocities

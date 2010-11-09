@@ -150,7 +150,7 @@ static int update_atoms_structure(PyObject *pyat)
   }
   for (i=0; i<3; i++)
     for (j=0; j<3; j++)
-      atomeye_atoms.lattice[i][j] = *(double *)PyArray_GETPTR2(lattice, i, j);
+      atomeye_atoms.lattice[i][j] = *(double *)PyArray_GETPTR2(lattice, j, i);
 
   Py_DECREF(n);                       
   Py_DECREF(properties);
