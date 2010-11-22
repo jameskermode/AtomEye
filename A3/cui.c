@@ -769,6 +769,7 @@ static struct isvt {
     NAVI(v3, arrow_up[1]),		   
     NAVI(v3, arrow_up[2]),
     NAVI(int, arrow_overlay),
+    NAVI(int, small_cell_err_handler),
 
     AX3D(v3, x), /* coordinates of the viewpoint */
     AX3D(double, k), /* conversion factor from radian to window pixels*/
@@ -2830,8 +2831,7 @@ static bool proc_load_config(int iw, char *instr, char **outstr)
     else
         N->s_overflow_err_handler =
             NEIGHBORLIST_S_OVERFLOW_ERR_HANDLER_BOUNDING_BOX;
-    //N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
-    N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+    N->small_cell_err_handler = n[iw].small_cell_err_handler;
     for (i=0; i<ct->t; i++)
         for (j=i; j<ct->t; j++)
             for (k=0; k<rcut_patch_top; k++)
@@ -2968,6 +2968,17 @@ static bool proc_load_config_advance(int iw, char *instr, char **outstr)
       }
     }
     return FALSE;
+}
+
+static bool proc_toggle_small_cell_mode(int iw, char *instr, char **outstr)
+{
+  if (n[iw].small_cell_err_handler == NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK) {
+    n[iw].small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
+  } else {
+    n[iw].small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;      
+  }
+  proc_load_config_advance(iw, "reload", outstr);
+  return(TRUE);
 }
 
 #define SCRIPT_LINE_SIZE  512
@@ -3815,6 +3826,7 @@ static struct aec atomeye_commands[] = {
     {AEC_NP(change_bgcolor), CUI_ARG_REQUIRED, "R G B"},
     {AEC_NP(toggle_parallel_projection), NULL, NULL},
     {AEC_NP(toggle_bond_mode), NULL, NULL},
+    {AEC_NP(toggle_small_cell_mode), NULL, NULL},
     {AEC_NP(draw_arrows), CUI_ARG_REQUIRED, "off | number|name [scale factor] [head height] [head width] [up vector]"},
     {AEC_NP(toggle_coordination_coloring), NULL, NULL},
     {AEC_NP(normal_coloring), CUI_ARG_REQUIRED, "[original]"},
@@ -4789,7 +4801,7 @@ static struct co cui_options[] = {
 int cui_init(int *argc, char ***argv)
 {
     int i, retval = 0;
-    char *str, *display_str = NULL, *TTYname = "/dev/null";
+    char *str, *display_str = NULL, *TTYname = "/dev/null", *small_cell_str;
     extern char config_fname[MAX_FILENAME_SIZE];
     extern char xterm_identifier[XTERM_IDENTIFIER_SIZE];
 
@@ -4803,6 +4815,8 @@ int cui_init(int *argc, char ***argv)
     cui_hostport = "";
     cui_scrfname = "";
     cui_geometry = "";
+    small_cell_str = NULL;
+    cui_small_cell_err_handler = NEIGHBORLIST_DEF_SMALL_CELL_ERR_HANDLER;
     config_fname[0] = 0;
     xterm_identifier[0] = 0;
     cui_diligence = TRUE;
@@ -4844,6 +4858,18 @@ int cui_init(int *argc, char ***argv)
             else if (strncmp(str, "-xterm_win=", strlen("-xterm_win=")) == 0) {
                     cui_xterm_win = atol(str + strlen("-xterm_win="));
             }
+	    else if (strncmp(str, "-small-cell=", strlen("-small-cell=")) == 0) {
+	      small_cell_str = str + strlen("-small-cell=");
+
+	      if (strcmp(small_cell_str, "quit") == 0) 
+		cui_small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_QUIT;
+	      else if (strcmp(small_cell_str, "multiply") == 0)
+		cui_small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
+	      else if (strcmp(small_cell_str, "nocheck") == 0)
+		cui_small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+	      else
+		pe("bad value of -small_cell argument \"%s\": must be one of \"quit\", \"multiply\" or \"nocheck\".\n", small_cell_str);
+	    }
             else {
                 struct co *cop;
                 for (cop = cui_options; cop->name; cop++) {
@@ -5001,6 +5027,15 @@ int cui_init(int *argc, char ***argv)
                 cui_argv[cui_argc++] = "-xterm";
         }
 #endif
+
+	if (small_cell_str != NULL) {
+	  char *small_cell = (char *)malloc(strlen("-small-cell=")+strlen(small_cell_str)+1);
+	  if (small_cell) {
+	    strcpy(small_cell, "-small-cell=");
+	    strcat(small_cell, small_cell_str);
+	    cui_argv[cui_argc++] = small_cell;
+	  }
+	}
 
         cui_argv[cui_argc] = NULL;
         execvp(cui_argv[0], cui_argv);
@@ -5203,15 +5238,9 @@ int atomeyelib_init(int argc, char *argv[], Atomeyelib_atoms *data)
     else
         N->s_overflow_err_handler =
             NEIGHBORLIST_S_OVERFLOW_ERR_HANDLER_BOUNDING_BOX;
-    if (i == CONFIG_CFG_LOADED)
-        N->small_cell_err_handler =
-	  NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
-    else
-        N->small_cell_err_handler =
-	  NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
 
-    N->small_cell_err_handler =
-      NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+    /* Use current value of small_cell_err_handler option */
+    N->small_cell_err_handler = NEIGHBORLIST_DEF_SMALL_CELL_ERR_HANDLER;
 
     /* the PDB does have CRYST1 tag but still overflows, the */
     /* above still happens. Only when there is CRYST1 tag    */
@@ -5503,8 +5532,7 @@ int atomeyelib_load_libatoms(int iw, Atomeyelib_atoms *atoms, char *title, char 
     Neighborlist_Recreate_Form (Config_Aapp_to_Alib, ct, N);
     N->s_overflow_err_handler =
       NEIGHBORLIST_S_OVERFLOW_ERR_HANDLER_FOLD_INTO_PBC;
-    //N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
-    N->small_cell_err_handler = NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+    N->small_cell_err_handler = n[iw].small_cell_err_handler; 
     for (i=0; i<ct->t; i++)
         for (j=i; j<ct->t; j++)
             for (k=0; k<rcut_patch_top; k++)

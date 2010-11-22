@@ -297,6 +297,10 @@ class AtomEyeView(object):
     def toggle_bond_mode(self):
         self.run_command("toggle_bond_mode" )
 
+    def toggle_small_cell_mode(self):
+        self.run_command("toggle_small_cell_mode")
+        self.redraw()
+
     def normal_coloring(self):
         self.run_command("normal_coloring")
 

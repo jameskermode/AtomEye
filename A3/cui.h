@@ -50,6 +50,7 @@ CUI_GLOBAL char cui_title[CUI_LINEMAX];
 CUI_GLOBAL bool cui_diligence;
 CUI_GLOBAL double cui_time;
 CUI_GLOBAL Window cui_xterm_win;
+CUI_GLOBAL int cui_small_cell_err_handler;
 
 /* cui.c */
 double cui_wtime(void);

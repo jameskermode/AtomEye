@@ -839,6 +839,7 @@ void thread_start (void *icopy)
 	n[iw].arrow_head_width = 0.05;
 	n[iw].arrow_overlay = 0;
 	V3ASSIGN(0.0,1.0,0.0, n[iw].arrow_up);
+	n[iw].small_cell_err_handler = cui_small_cell_err_handler;
     }
     AXSETICON(iw);
     AX_plugin_3D_module(iw);
@@ -1059,15 +1060,12 @@ int main (int argc, char *argv[])
     else
         N->s_overflow_err_handler =
             NEIGHBORLIST_S_OVERFLOW_ERR_HANDLER_BOUNDING_BOX;
-    if (i == CONFIG_CFG_LOADED)
-        N->small_cell_err_handler =
-	  NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_MULTIPLY;
-    else
-        N->small_cell_err_handler =
-	  NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
 
-    N->small_cell_err_handler =
-      NEIGHBORLIST_SMALL_CELL_ERR_HANDLER_NOCHECK;
+    /* Use default value of small_cell_err_handler */ 
+    N->small_cell_err_handler = NEIGHBORLIST_DEF_SMALL_CELL_ERR_HANDLER;
+#ifdef USE_CUI
+    N->small_cell_err_handler = cui_small_cell_err_handler;
+#endif
     
     /* the PDB does have CRYST1 tag but still overflows, the */
     /* above still happens. Only when there is CRYST1 tag    */

@@ -93,7 +93,7 @@ typedef struct
     double arrow_head_width;           /* arrow head half-width, as fraction of arrow length. Default 0.05 */
     double arrow_up[3];                /* up vector for arrow heads. heads are drawn in the plane defined by their direction and this vector */
     int arrow_overlay;                 /* if true, do not clear old arrows before adding new news. Default 0 */
-    
+    int small_cell_err_handler;          /* used when computing neighbour list - 0=quit, 1=multiply, 2=ignore */
 } Navigator;
 
 /* parallel projection */
