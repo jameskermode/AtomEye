@@ -185,6 +185,7 @@ atomeye_open_window(PyObject *self, PyObject *args)
   if (!atomeye_initialised) {
     argv[0] = (char *)malloc(20);
     argv[1] = (char *)malloc(20);
+    argv[2] = (char *)malloc(20);
     strcpy(argv[0], "A");
     strcpy(argv[1], "-nostdin");
     argc = 2;
@@ -203,6 +204,7 @@ atomeye_open_window(PyObject *self, PyObject *args)
 
     free(argv[0]);
     free(argv[1]);
+    free(argv[2]);
 
     atomeye_initialised = 1;
   }

@@ -54,13 +54,15 @@ def on_new_window(iw):
         views[iw] = AtomEyeView(window_id=iw)
     
 class AtomEyeView(object):
-    def __init__(self, atoms=None, window_id=None, copy=None, frame=1, delta=1, property=None, arrows=None, nowindow=0,
-                 *arrowargs, **arrowkwargs):
+    def __init__(self, atoms=None, window_id=None, copy=None, frame=1, delta=1, property=None, arrows=None, nowindow=False,
+                 echo=False, block=False, *arrowargs, **arrowkwargs):
         self.atoms_orig = atoms
         self.atoms = atoms
         self.is_quippy = False
         self.frame = frame
         self.delta = delta
+        self.echo = echo
+        self.block = block
 
         self.is_alive = False
 
@@ -78,7 +80,7 @@ class AtomEyeView(object):
         if property is not None or arrows is not None:
             self.redraw(property=property, arrows=arrows, *arrowargs, **arrowkwargs)
             
-    def start(self, copy=None, nowindow=0):
+    def start(self, copy=None, nowindow=False):
         if self.is_alive: return
         
         if self.atoms is None:
@@ -106,7 +108,7 @@ class AtomEyeView(object):
         self.is_alive = False
         self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
         self.is_quippy = True
-                
+
         views[self._window_id] = self
         while not self.is_alive:
             time.sleep(0.1)
@@ -232,7 +234,11 @@ class AtomEyeView(object):
     def run_command(self, command):
         if not self.is_alive: 
             raise RuntimeError('is_alive is False')
+        if self.echo:
+            print command
         _atomeye.run_command(self._window_id, command)
+        if self.block:
+            self.wait()
 
     def run_script(self, script):
         if type(script) == type(''):
