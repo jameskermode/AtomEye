@@ -55,14 +55,14 @@ def on_new_window(iw):
     
 class AtomEyeView(object):
     def __init__(self, atoms=None, window_id=None, copy=None, frame=1, delta=1, property=None, arrows=None, nowindow=False,
-                 echo=False, block=False, *arrowargs, **arrowkwargs):
+                 echo=False, block=False, fortran_indexing=True, *arrowargs, **arrowkwargs):
         self.atoms_orig = atoms
         self.atoms = atoms
-        self.is_quippy = False
         self.frame = frame
         self.delta = delta
         self.echo = echo
         self.block = block
+        self.fortran_indexing = fortran_indexing
 
         self.is_alive = False
 
@@ -87,13 +87,14 @@ class AtomEyeView(object):
             title = '(null)'
         else:
             title = 'Atoms'
-#            if hasattr(self.atoms, '__iter__'):
-#                theat = self.atoms[self.frame]
-#                fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
-#                title = 'AtomsList[%s] len=%s' % (fmt % self.frame, fmt % len(self.atoms))
-#
-#            else:
-            title = 'Atoms'
+            if hasattr(self.atoms, '__iter__'):
+                theat = self.atoms[self.frame]
+                fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
+                title = 'AtomsList[%s] len=%s' % (fmt % self.frame, fmt % len(self.atoms))
+
+            else:
+                title = 'Atoms'
+                theat = self.atoms
 
         icopy = -1
         if copy is not None:
@@ -106,8 +107,7 @@ class AtomEyeView(object):
 
         self.atoms_orig = self.atoms
         self.is_alive = False
-        self._window_id = _atomeye.open_window(icopy,self.atoms,nowindow)
-        self.is_quippy = True
+        self._window_id = _atomeye.open_window(icopy,theat,nowindow)
 
         views[self._window_id] = self
         while not self.is_alive:
@@ -118,25 +118,17 @@ class AtomEyeView(object):
 
     def on_click(self, idx):
         if self.atoms is None: return
-        #theat = self.atoms
-        #if hasattr(self.atoms, '__iter__'):
-        #    theat = self.atoms[self.frame]
+        theat = self.atoms
+        if hasattr(self.atoms, '__iter__'):
+            theat = self.atoms[self.frame]
 
         if idx >= len(self.atoms_orig):
             idx = idx % len(self.atoms_orig)
-        if self.is_quippy:
+        if self.fortran_indexing:
             idx = idx + 1 # atomeye uses zero based indices
-        print "frame %d, atom %d clicked" % (self.frame, idx)
-        if self.is_quippy:
-            for k in sorted(d):
-                v = d[k]
-                if isinstance(v, FortranArray) and v.dtype.kind == 'f':
-                    print '%s = %s (norm %f)' % (k, v, v.norm())
-                else:
-                    print '%s = %s' % (k, v)
-            print
-        else:
-            print self.atoms[idx]
+
+        print 
+        print theat[idx]
         sys.stdout.flush()
 
     def on_advance(self, mode):
@@ -185,47 +177,38 @@ class AtomEyeView(object):
         self.redraw(property=property, highlight=highlight, arrows=arrows, *arrowargs, **arrowkwargs)
 
     
-    def redraw(self, property=None, highlight=None, arrows=None, *arrowargs, **arrowkwargs):
+    def redraw(self, property=None, arrows=None, *arrowargs, **arrowkwargs):
         if not self.is_alive:
             raise RuntimeError('is_alive is False')
 
         if self.atoms is None:
             raise RuntimeError('Nothing to view -- set self.atoms to Atoms or sequence of Atoms')
 
-        #theat = self.atoms
-        #if hasattr(self.atoms, '__iter__'):
-        #    theat = self.atoms[self.frame]
-        #    fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
-        #    title = 'AtomsList[%s] len=%s' % (fmt % self.frame, fmt % len(self.atoms))
-        #else:
-        title = 'Atoms'
+        theat = self.atoms
+        if hasattr(self.atoms, '__iter__'):
+            theat = self.atoms[self.frame]
+            fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
+            title = 'AtomsList[%s] len=%s' % (fmt % self.frame, fmt % len(self.atoms))
+        else:
+            title = 'Atoms'
 
         if property is not None:
             if isinstance(property,str):
                 pass
             elif isinstance(property,int):
-                #if theat.has_property('_show'):
-                #    theat.remove_property('_show')
-                #theat.add_property('_show', False)
-                #theat._show[:] = [i == property for i in frange(theat.n)]
-                #property = '_show'
-                raise NotImplementedError
+                if theat.has_property('_show'):
+                    theat.remove_property('_show')
+                theat.add_property('_show', False)
+                theat._show[:] = [i == property for i in frange(theat.n)]
+                property = '_show'
             else:
-                if self.atoms.has_property('_show'):
-                    self.atoms.remove_property('_show')
+                if theat.has_property('_show'):
+                    theat.remove_property('_show')
                 self.atoms.add_property('_show', property)
                 property = '_show'
-                #raise NotImplementedError
 
-        if highlight is not None:
-            #theat.add_property('highlight', False)
-            #theat.highlight[highlight] = True
-            #property = 'highlight'
-            raise NotImplementedError
-
-        self.atoms_orig = self.atoms
-        _atomeye.load_atoms(self._window_id, title, self.atoms)
-        self.is_quippy = True
+        self.atoms_orig = theat
+        _atomeye.load_atoms(self._window_id, title, theat)
         if property is not None:
             self.aux_property_coloring(property)
         if arrows is not None:
@@ -235,7 +218,7 @@ class AtomEyeView(object):
         if not self.is_alive: 
             raise RuntimeError('is_alive is False')
         if self.echo:
-            print command
+            print command.strip()
         _atomeye.run_command(self._window_id, command)
         if self.block:
             self.wait()
@@ -389,7 +372,8 @@ class AtomEyeView(object):
         self.run_command("xtal_origin_goto %f %f %f" % (s[0], s[1], s[2]))
 
     def find_atom(self, i):
-        self.run_command("find_atom %d" % (i-1))
+        if self.fortran_indexing: i = i-1
+        self.run_command("find_atom %d" % i)
 
     def resize(self, width, height):
         self.run_command("resize %d %d" % (width, height))
