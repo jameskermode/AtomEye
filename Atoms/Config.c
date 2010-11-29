@@ -2936,8 +2936,8 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
   int n_frame, n_atom, n_label, n_string, i;
   static int frame;
   fortran_t params[SIZEOF_FORTRAN_T], properties[SIZEOF_FORTRAN_T];
-  double lattice[3][3];
-  int offset, inc,  error, range[2];
+  double lattice[3][3], cell_lengths[3], cell_angles[3];
+  int offset, inc,  error, range[2], cell_rotated;
 
   xyz = 0;
   netcdf = 0;
@@ -3006,8 +3006,15 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
   // Read the file into params, properties dictionaries
   if (xyz)
     read_xyz(nfname, params, properties, NULL, lattice, &n_atom, 1, frame, range, 0, 0, &error);
-  else
-    read_netcdf(nfname, params, properties, NULL, lattice, &n_atom, frame, 1, range, 0, 0.0, &error);
+  else {
+    read_netcdf(nfname, params, properties, NULL, lattice, cell_lengths, cell_angles, 
+		&cell_rotated, &n_atom, frame, 1, range, 0, 0.0, &error);
+    lattice_abc_to_xyz_(cell_lengths, cell_angles, lattice);
+    if (cell_rotated == 1) {
+      Fprintf(info, "WARNING: file has cell_rotated=1 but rotation not yet implemented\n");
+      
+    }
+  }
   if (error != ERROR_NONE) c_error_abort_(NULL); //pe("error reading from  file %s", nfname);
 
   Config_load_libatoms(params, properties, lattice, n_atom, info, Config_Alib_to_Alib);
