@@ -162,7 +162,7 @@ class AtomEyeView(object):
             view = None
         del views[self._window_id]
 
-    def show(self, obj, property=None, highlight=None, frame=None, arrows=None, *arrowargs, **arrowkwargs):
+    def show(self, obj, property=None, frame=None, arrows=None, *arrowargs, **arrowkwargs):
         self.atoms = obj
         if hasattr(obj,'__iter__'):
             if frame is not None:
@@ -174,7 +174,7 @@ class AtomEyeView(object):
                         frame=len(self.atoms)-1
                 self.frame = frame
                 
-        self.redraw(property=property, highlight=highlight, arrows=arrows, *arrowargs, **arrowkwargs)
+        self.redraw(property=property, arrows=arrows, *arrowargs, **arrowkwargs)
 
     
     def redraw(self, property=None, arrows=None, *arrowargs, **arrowkwargs):
@@ -424,7 +424,7 @@ _atomeye.set_handlers(on_click, on_close, on_advance, on_new_window)
 
 view = None
 
-def show(obj, property=None, highlight=None, frame=1, window_id=None, nowindow=False, arrows=None, *arrowargs, **arrowkwargs):
+def show(obj, property=None, frame=1, window_id=None, nowindow=False, arrows=None, *arrowargs, **arrowkwargs):
     """Convenience function to show obj in the default AtomEye view
 
     If window_id is not None, then this window will be used. Otherwise
@@ -444,8 +444,8 @@ def show(obj, property=None, highlight=None, frame=1, window_id=None, nowindow=F
             view = views[views.keys()[0]]
             view.show(obj, property, frame)
         else:
-            view = AtomEyeView(obj, property=property, highlight=highlight, frame=frame, nowindow=nowindow, arrows=arrows, *arrowargs, **arrowkwargs)
+            view = AtomEyeView(obj, property=property, frame=frame, nowindow=nowindow, arrows=arrows, *arrowargs, **arrowkwargs)
     else:
-        view.show(obj, property, highlight, frame, arrows=arrows, *arrowargs, **arrowkwargs)
+        view.show(obj, property, frame, arrows=arrows, *arrowargs, **arrowkwargs)
 
     return view
