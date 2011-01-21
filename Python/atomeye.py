@@ -83,6 +83,7 @@ class AtomEyeView(object):
     def start(self, copy=None, nowindow=False):
         if self.is_alive: return
         
+        theat = None
         if self.atoms is None:
             title = '(null)'
         else:

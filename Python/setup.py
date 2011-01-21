@@ -67,12 +67,13 @@ atomeye_libdirs = [ f[2:] for f in syslibs if f.startswith('-L') ]
 atomeye_extra_link_args = [ f for f in syslibs if not f.startswith('-l') and not f.startswith('-L')]
 
 quip_root_dir = os.environ['QUIP_ROOT']
+quip_arch = os.environ['QUIP_ARCH']
 
 setup(name='atomeye',
       py_modules = ['atomeye'],
       ext_modules = [Extension(name='_atomeye',
                                sources=['atomeyemodule.c'],
-                               library_dirs=atomeye_libdirs + [os.path.join(atomeye_dir, 'lib')],
+                               library_dirs=atomeye_libdirs + [os.path.join(atomeye_dir, 'lib')] + [os.path.join(quip_root_dir, 'build.%s' % quip_arch)],
                                libraries=['AtomEye', 'AX', 'Atoms', 'VecMat3', 'VecMat', 'IO', 'Scalar', 'Timer'] + atomeye_libs,
                                include_dirs=[os.path.join(atomeye_dir,'include'), os.path.join(quip_root_dir,'libAtoms')],
                                define_macros=[],
