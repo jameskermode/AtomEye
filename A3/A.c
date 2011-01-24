@@ -838,6 +838,7 @@ void thread_start (void *icopy)
 	n[iw].arrow_head_height = 0.1;
 	n[iw].arrow_head_width = 0.05;
 	n[iw].arrow_overlay = 0;
+	V3ASSIGN(0.0,0.0,0.0, n[iw].arrow_color);
 	V3ASSIGN(0.0,1.0,0.0, n[iw].arrow_up);
 	n[iw].small_cell_err_handler = cui_small_cell_err_handler;
     }

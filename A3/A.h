@@ -93,6 +93,7 @@ typedef struct
     double arrow_head_width;           /* arrow head half-width, as fraction of arrow length. Default 0.05 */
     double arrow_up[3];                /* up vector for arrow heads. heads are drawn in the plane defined by their direction and this vector */
     int arrow_overlay;                 /* if true, do not clear old arrows before adding new news. Default 0 */
+    double arrow_color[3]; 
     int small_cell_err_handler;          /* used when computing neighbour list - 0=quit, 1=multiply, 2=ignore */
 } Navigator;
 
@@ -147,7 +148,7 @@ void select_fbasename (char *raw);
 extern int temporary_disable_bond;
 void Config_to_3D_Balls (double atom_r_ratio);
 void Config_to_3D_Bonds (double bond_radius);
-void Config_to_3D_Arrows (int arrow_idx, double scale_factor, double head_height, double head_width, double up[3], int overlay);
+void Config_to_3D_Arrows (int arrow_idx, double scale_factor, double head_height, double head_width, double up[3], int overlay, double colors[3]);
 bool change_atom_r_ratio (double atom_r_ratio);
 bool change_bond_radius (double bond_radius);
 void hook_to_cylinder (int k, double *hook);

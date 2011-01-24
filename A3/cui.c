@@ -765,10 +765,10 @@ static struct isvt {
     NAVI(double, arrow_scale_factor),	   /* multiplicative scale factor for arrow length. Default is zero which autoscales */                    
     NAVI(double, arrow_head_height),	   /* arrow head height, as fraction of arrow length. Default 0.1 */                                       
     NAVI(double, arrow_head_width),	   /* arrow head half-width, as fraction of arrow length. Default 0.05 */                                  
-    NAVI(v3, arrow_up[0]),		   /* up vector for arrow heads. heads are drawn in the plane defined by their direction and this vector */
-    NAVI(v3, arrow_up[1]),		   
-    NAVI(v3, arrow_up[2]),
-    NAVI(int, arrow_overlay),
+    NAVI(v3, arrow_up),	   	           /* up vector for arrow heads. heads are drawn in the plane defined by their direction and this vector */
+    NAVI(int, arrow_overlay),              /* if true, overlay arrows with those previously drawn */
+    NAVI(v3, arrow_color),                /* arrow color, as RGB 3-vector */
+
     NAVI(int, small_cell_err_handler),
 
     AX3D(v3, x), /* coordinates of the viewpoint */
@@ -1677,7 +1677,7 @@ static bool proc_draw_arrows(int iw, char *instr, char **outstr)
 	n[iw].arrow_mode = TRUE;
 	Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
 			    n[iw].arrow_head_height, n[iw].arrow_head_width, 
-			    n[iw].arrow_up, n[iw].arrow_overlay);
+			    n[iw].arrow_up, n[iw].arrow_overlay, n[iw].arrow_color);
 
         return TRUE;
     }
@@ -2893,7 +2893,7 @@ static bool proc_load_config(int iw, char *instr, char **outstr)
     if (n[iw].arrow_mode)
       Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
 			  n[iw].arrow_head_height, n[iw].arrow_head_width, 
-			  n[iw].arrow_up, n[iw].arrow_overlay);
+			  n[iw].arrow_up, n[iw].arrow_overlay, n[iw].arrow_color);
 
     select_fbasename (config_fname);
     if ((n[iw].xtal_mode) && (n[iw].color_mode == COLOR_MODE_COORD))
@@ -5594,7 +5594,7 @@ int atomeyelib_load_libatoms(int iw, Atomeyelib_atoms *atoms, char *title, char 
     if (n[iw].arrow_mode)
       Config_to_3D_Arrows(n[iw].arrow_idx, n[iw].arrow_scale_factor, 
 			  n[iw].arrow_head_height, n[iw].arrow_head_width, 
-			  n[iw].arrow_up, n[iw].arrow_overlay);
+			  n[iw].arrow_up, n[iw].arrow_overlay, n[iw].arrow_color);
 
     //    strcpy(fbasename,title);
 

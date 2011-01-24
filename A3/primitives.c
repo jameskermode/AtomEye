@@ -57,7 +57,7 @@ void Config_to_3D_Bonds (double bond_radius)
 
 
 /* Allocate arrows */
-void Config_to_3D_Arrows(int arrow_idx, double scale_factor, double head_height, double head_width, double up[3], int overlay)
+void Config_to_3D_Arrows(int arrow_idx, double scale_factor, double head_height, double head_width, double up[3], int overlay, double color[3])
 {
   register int i, j, offset;
   double dx[3], head[3], head1[3], perp[3], perp2[3], sum;
@@ -102,12 +102,13 @@ void Config_to_3D_Arrows(int arrow_idx, double scale_factor, double head_height,
     printf("Config_to_3D_Arrows: average magnitude = %f, scale_factor set to %f\n", 1.0/scale_factor, scale_factor);
   }
 
+  printf("Config_to_3D_Arrows: color = <%.3f,%.3f,%.3f>\n", color[0], color[1], color[2]);
+
   for (i=0; i<np; i++)
   {
-    /* Todo - colour lines ? */
-    AX_3D_AssignRGB (arrows->LINE[offset+3*i],   0.0, 0.0, 0.0);
-    AX_3D_AssignRGB (arrows->LINE[offset+3*i+1], 0.0, 0.0, 0.0);
-    AX_3D_AssignRGB (arrows->LINE[offset+3*i+2], 0.0, 0.0, 0.0);
+    AX_3D_AssignRGB (arrows->LINE[offset+3*i],   color[0], color[1], color[2]);
+    AX_3D_AssignRGB (arrows->LINE[offset+3*i+1], color[0], color[1], color[2]);
+    AX_3D_AssignRGB (arrows->LINE[offset+3*i+2], color[0], color[1], color[2]);
 
     dx[0] = *(CONFIG_auxiliary[arrow_idx+0]+i)*scale_factor;
     dx[1] = *(CONFIG_auxiliary[arrow_idx+1]+i)*scale_factor;
