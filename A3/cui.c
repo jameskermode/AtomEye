@@ -725,7 +725,7 @@ static struct isvt {
     NAVI(int, auxiliary_idx),
         /* which auxiliary property should we render */
     NAVI(int, auxiliary_cmap), /* which colormap should we use */
-#if (CONFIG_MAX_AUXILIARY+MAX_GEO_MEASURES == 50) /* 18 */
+#if (CONFIG_MAX_AUXILIARY+MAX_GEO_MEASURES == 66) /* 18 */
 #   define NAVI_AUX_THR(i)  NAVI(v2, auxiliary_threshold[i])
     NAVI_AUX_THR(0), NAVI_AUX_THR(1), NAVI_AUX_THR(2), NAVI_AUX_THR(3),
     NAVI_AUX_THR(4), NAVI_AUX_THR(5), NAVI_AUX_THR(6), NAVI_AUX_THR(7),
@@ -739,6 +739,10 @@ static struct isvt {
     NAVI_AUX_THR(36),NAVI_AUX_THR(37),NAVI_AUX_THR(38),NAVI_AUX_THR(39),
     NAVI_AUX_THR(40),NAVI_AUX_THR(41),NAVI_AUX_THR(42),NAVI_AUX_THR(43),
     NAVI_AUX_THR(44),NAVI_AUX_THR(45),NAVI_AUX_THR(46),NAVI_AUX_THR(47),
+    NAVI_AUX_THR(48),NAVI_AUX_THR(49),NAVI_AUX_THR(50),NAVI_AUX_THR(51),
+    NAVI_AUX_THR(52),NAVI_AUX_THR(53),NAVI_AUX_THR(54),NAVI_AUX_THR(55),
+    NAVI_AUX_THR(56),NAVI_AUX_THR(57),NAVI_AUX_THR(58),NAVI_AUX_THR(59),
+    NAVI_AUX_THR(60),NAVI_AUX_THR(61),NAVI_AUX_THR(62),NAVI_AUX_THR(63),
 #else
 #   error
 #endif

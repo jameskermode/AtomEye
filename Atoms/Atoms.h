@@ -154,7 +154,7 @@ void Config_save (Alib_Declare_Config, bool PBC, char *fname);
 /* 4. New properties of arbitrary precision can be added.   */
 /************************************************************/
 /* #define CONFIG_MAX_AUXILIARY 16 */
-#define CONFIG_MAX_AUXILIARY 48
+#define CONFIG_MAX_AUXILIARY 64
 void vCONFIG_save
 (Alib_Declare_Config, bool PBC, char *fname, char *s_formats,
  char *velocity_formats, int num_auxiliary, va_list ap);
