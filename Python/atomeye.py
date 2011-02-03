@@ -54,8 +54,8 @@ def on_new_window(iw):
         views[iw] = AtomEyeView(window_id=iw)
     
 class AtomEyeView(object):
-    def __init__(self, atoms=None, window_id=None, copy=None, frame=1, delta=1, property=None, arrows=None, nowindow=False,
-                 echo=False, block=False, fortran_indexing=True, *arrowargs, **arrowkwargs):
+    def __init__(self, atoms=None, window_id=None, copy=None, frame=0, delta=1, property=None, arrows=None, nowindow=False,
+                 echo=False, block=False, fortran_indexing=True, verbose=True, *arrowargs, **arrowkwargs):
         self.atoms_orig = atoms
         self.atoms = atoms
         self.frame = frame
@@ -63,7 +63,7 @@ class AtomEyeView(object):
         self.echo = echo
         self.block = block
         self.fortran_indexing = fortran_indexing
-
+        self.verbose = verbose
         self.is_alive = False
 
         if window_id is None:
@@ -128,9 +128,10 @@ class AtomEyeView(object):
         if self.fortran_indexing:
             idx = idx + 1 # atomeye uses zero based indices
 
-        print 
-        print theat[idx]
-        sys.stdout.flush()
+        if self.verbose:
+            print 
+            print theat[idx]
+            sys.stdout.flush()
 
     def on_advance(self, mode):
         if not hasattr(self.atoms,'__iter__'): return
@@ -140,19 +141,27 @@ class AtomEyeView(object):
         elif mode == 'backward':
             self.frame -= self.delta
         elif mode == 'first':
-            self.frame = 1
+            self.frame = 0
         elif mode == 'last':
-            self.frame = len(self.atoms)
+            self.frame = len(self.atoms)-1
 
-        if self.frame > len(self.atoms):
+        if self.frame > len(self.atoms)-1:
             try:
                 self.atoms[self.frame]
             except IndexError:
-                self.frame = ((self.frame-1) % len(self.atoms)) + 1
+                self.frame = self.frame % len(self.atoms)
                 
         if self.frame < 1:
-            self.frame = ((self.frame-1) % len(self.atoms)) + 1
+            self.frame = self.frame % len(self.atoms)
+
+        print 'setting frame to %d' % self.frame
+        sys.stdout.flush()
         self.redraw()
+
+        if self.verbose:
+            print
+            print self.atoms[self.frame].params
+            sys.stdout.flush()
 
 
     def on_close(self):
@@ -425,7 +434,7 @@ _atomeye.set_handlers(on_click, on_close, on_advance, on_new_window)
 
 view = None
 
-def show(obj, property=None, frame=1, window_id=None, nowindow=False, arrows=None, *arrowargs, **arrowkwargs):
+def show(obj, property=None, frame=0, window_id=None, nowindow=False, arrows=None, verbose=True, *arrowargs, **arrowkwargs):
     """Convenience function to show obj in the default AtomEye view
 
     If window_id is not None, then this window will be used. Otherwise
@@ -445,7 +454,7 @@ def show(obj, property=None, frame=1, window_id=None, nowindow=False, arrows=Non
             view = views[views.keys()[0]]
             view.show(obj, property, frame)
         else:
-            view = AtomEyeView(obj, property=property, frame=frame, nowindow=nowindow, arrows=arrows, *arrowargs, **arrowkwargs)
+            view = AtomEyeView(obj, property=property, frame=frame, nowindow=nowindow, arrows=arrows, verbose=verbose, *arrowargs, **arrowkwargs)
     else:
         view.show(obj, property, frame, arrows=arrows, *arrowargs, **arrowkwargs)
 
