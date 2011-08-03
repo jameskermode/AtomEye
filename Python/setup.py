@@ -64,17 +64,21 @@ syslibs = syslibs.split()
 
 atomeye_libs = ['m', 'Xpm', 'Xext', 'X11', 'mpi', 'png', 'z', 'jpeg', 'history', 'ncurses', 'readline'] + [ f[2:] for f in syslibs if f.startswith('-l') ]
 atomeye_libdirs = [ f[2:] for f in syslibs if f.startswith('-L') ]
-atomeye_extra_link_args = [ f for f in syslibs if not f.startswith('-l') and not f.startswith('-L')]
+atomeye_internal_libs = ['%s/lib%s.a' % (os.path.join(atomeye_dir, 'lib'), lib) for lib in [ 'AtomEye', 'AX', 'Atoms', 'VecMat3', 'VecMat', 'IO', 'Scalar', 'Timer'] ]
+atomeye_extra_link_args = atomeye_internal_libs + [ f for f in syslibs if not f.startswith('-l') and not f.startswith('-L')]
 
 quip_root_dir = os.environ['QUIP_ROOT']
 quip_arch = os.environ['QUIP_ARCH']
+
+if 'QUIPPY_LDFLAGS' in makefile:
+    atomeye_extra_link_args.extend(makefile['QUIPPY_LDFLAGS'].split())
 
 setup(name='atomeye',
       py_modules = ['atomeye'],
       ext_modules = [Extension(name='_atomeye',
                                sources=['atomeyemodule.c'],
-                               library_dirs=atomeye_libdirs + [os.path.join(atomeye_dir, 'lib')],
-                               libraries=['AtomEye', 'AX', 'Atoms', 'VecMat3', 'VecMat', 'IO', 'Scalar', 'Timer'] + atomeye_libs,
+                               library_dirs=atomeye_libdirs,
+                               libraries=atomeye_libs,
                                include_dirs=[os.path.join(atomeye_dir,'include'), os.path.join(quip_root_dir,'libAtoms')],
                                define_macros=[],
                                extra_link_args=atomeye_extra_link_args,
