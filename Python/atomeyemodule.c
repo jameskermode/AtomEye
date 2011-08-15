@@ -84,105 +84,184 @@ static void on_new(int iw)
 
   state = PyGILState_Ensure();
   if (on_new_pyfunc != NULL) {
-    arglist = Py_BuildValue("(i)", iw);       
+    arglist = Py_BuildValue("(i)", iw);
     PyEval_CallObject(on_new_pyfunc, arglist);
     Py_DECREF(arglist);                       
   }
   PyGILState_Release(state);
 }
 
-static int update_atoms_structure(PyObject *pyat)
+static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
 {
-  int i,j;
-  PyObject *n = NULL, *lattice = NULL, *properties = NULL, *fpointer = NULL;
+  int i,j, type, shape[2], error = 0;
+  PyObject *fpointer = NULL, *pykey = NULL, *array = NULL, *iterator = NULL;
+  char *key;
+  void *data;
 
-  /* atoms.n - int */
-  if ((n = PyObject_GetAttrString(pyat, "n")) == NULL) {
-    PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.n");
-    goto fail;
-  }
-  if (!PyInt_Check(n)) {
-    PyErr_SetString(PyExc_TypeError, "atoms.n must be an integer");
-    goto fail;
-  }
-  atomeye_atoms.n_atom = (int)PyInt_AsLong(n);
+  if (atomeye_atoms.allocated)
+    dictionary_finalise(atomeye_atoms.properties);
 
-  /* atoms.properties._fpointer */
-  if ((properties = PyObject_GetAttrString(pyat, "properties")) == NULL) {
-    PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.properties");
-    goto fail;
-  }
-  if ((fpointer = PyObject_GetAttrString(properties, "_fpointer")) == NULL) {
-    PyErr_SetString(PyExc_AttributeError, "Missing attribute atoms.properties._fpointer");
-    goto fail;
-  }
-  if (PyArray_NDIM(fpointer) != 1) {
-    PyErr_SetString(PyExc_ValueError, "atoms.properties._fpointer must have 1 dimension");
-    goto fail;
-  }
-  if (PyArray_DIM(fpointer, 0) != SIZEOF_FORTRAN_T) {
-    PyErr_SetString(PyExc_ValueError, "atoms.properties._fpointer must have shape (SIZEOF_FORTRAN_T,)");
-    goto fail;
-  }
-  if (PyArray_TYPE(fpointer) != NPY_INT) {
-    PyErr_SetString(PyExc_ValueError, "atoms.properties._fpointer must have type int");
-    goto fail;
-  }
-  for (i=0; i < SIZEOF_FORTRAN_T; i++)
-    atomeye_atoms.properties[i] = ((int*)PyArray_DATA(fpointer))[i];
+  atomeye_atoms.n_atom = n_atom;
 
-  /* atoms.lattice */
-  if ((lattice = PyObject_GetAttrString(pyat, "lattice")) == NULL) {
-    PyErr_SetString(PyExc_AttributeError, "Missing atoms.lattice");
+  /* cell - 3x3 array of lattice vector as rows */
+  if (PyArray_NDIM(cell) != 2) {
+    PyErr_SetString(PyExc_ValueError, "cell must have 2 dimensions");
     goto fail;
   }
-  if (PyArray_NDIM(lattice) != 2) {
-    PyErr_SetString(PyExc_ValueError, "atoms.lattice must have 2 dimensions");
+  if (PyArray_DIM(cell,0) != 3 || PyArray_DIM(cell,1) != 3) {
+    PyErr_SetString(PyExc_ValueError, "cell must have shape (3,3)");
     goto fail;
   }
-  if (PyArray_DIM(lattice,0) != 3 || PyArray_DIM(lattice,1) != 3) {
-    PyErr_SetString(PyExc_ValueError, "atoms.lattice must have shape (3,3)");
-    goto fail;
-  }
-  if (PyArray_TYPE(lattice) != NPY_DOUBLE) {
-    PyErr_SetString(PyExc_ValueError, "atoms.lattice must have type double");
+  if (PyArray_TYPE(cell) != NPY_DOUBLE) {
+    PyErr_SetString(PyExc_ValueError, "cell must have type double");
     goto fail;
   }
   for (i=0; i<3; i++)
     for (j=0; j<3; j++)
-      atomeye_atoms.lattice[i][j] = *(double *)PyArray_GETPTR2(lattice, j, i);
+      atomeye_atoms.lattice[i][j] = *(double *)PyArray_GETPTR2(cell, i, j);
 
-  Py_DECREF(n);                       
-  Py_DECREF(properties);
-  Py_DECREF(fpointer);
-  Py_DECREF(lattice);
+  /* Test for arrays._fpointer */
+  if (!PyObject_HasAttrString(arrays, "_fpointer")) {
+    if (!PyMapping_Check(arrays)) {
+      PyErr_SetString(PyExc_ValueError, "arrays must support mapping protocol");
+      goto fail;
+    }
+
+    /* construct new Fortran dictionary, copying keys and values from arrays */
+    dictionary_initialise(atomeye_atoms.properties);
+    atomeye_atoms.allocated = 1;
+    
+    /* for key in arrays */
+    iterator = PyObject_GetIter(arrays);
+    while ((pykey = PyIter_Next(iterator))) {
+      if (!PyString_Check(pykey)) {
+	PyErr_SetString(PyExc_ValueError, "All keys in arrays must be strings");
+	goto fail;
+      }
+      key = PyString_AsString(pykey);
+      /* array = arrays[key] */
+      if ((array = PyMapping_GetItemString(arrays, key)) == NULL) { 
+	PyErr_Format(PyExc_ValueError, "Error accessing key %s in arrays", key);
+	goto fail;
+      }
+      if (!(PyArray_TYPE(array) == NPY_FLOAT32 || PyArray_TYPE(array) == NPY_FLOAT64 ||
+	    PyArray_TYPE(array) == NPY_INT32   || PyArray_TYPE(array) == NPY_INT64)) {
+	Py_DECREF(pykey);
+	Py_DECREF(array);
+	continue;
+      }
+      
+      if (PyArray_NDIM(array) == 1) {
+	if (PyArray_DIM(array, 0) != n_atom) {
+	  PyErr_Format(PyExc_ValueError, "Array \"%s\" in arrays must have size n_atoms (%d)", key, n_atom);
+	  goto fail;
+	}
+	
+	if (PyArray_TYPE(array) == NPY_FLOAT32 || PyArray_TYPE(array) == NPY_FLOAT64) 
+	  type = T_REAL_A;
+	else
+	  type = T_INTEGER_A;
+	shape[0] = n_atom;
+	dictionary_add_key(atomeye_atoms.properties, key, &type, shape, &data, &error, strlen(key));
+	if (error != 0) {
+	  PyErr_Format(PyExc_ValueError, "Error adding key \"%s\" shape (%d,%d)", key, shape[0], shape[1]);
+	  goto fail;
+	}
+	if (type == T_REAL_A) {
+	  for (i=0; i<n_atom; i++)
+	    REAL_A(data, i) = *(double *)PyArray_GETPTR1(array, i);
+	} else {
+	  for (i=0; i<n_atom; i++)
+	    INTEGER_A(data, i) = *(int *)PyArray_GETPTR1(array, i);
+	}
+      } else if (PyArray_NDIM(array) == 2) {
+	if (PyArray_DIM(array, 0) != n_atom) {
+	  PyErr_Format(PyExc_ValueError, "Array \"%s\" in arrays must have shape (n_atom,n_cols)", key);
+	  goto fail;
+	}	
+
+	if (PyArray_TYPE(array) == NPY_FLOAT32 || PyArray_TYPE(array) == NPY_FLOAT64) 
+	  type = T_REAL_A2;
+	else
+	  type = T_INTEGER_A2;
+	shape[0] = PyArray_DIM(array, 1);
+	shape[1] = n_atom;
+	dictionary_add_key(atomeye_atoms.properties, key, &type, shape, &data, &error, strlen(key));	
+	if (error != 0) {
+	  PyErr_Format(PyExc_ValueError, "Error adding key \"%s\" shape (%d,%d)", key, shape[0], shape[1]);
+	  goto fail;
+	}
+	if (type == T_REAL_A2) {
+	  for (j=0; j<shape[1]; j++)
+	    for (i=0; i<shape[0]; i++)
+	      REAL_A2(data, shape, i, j) = *(double *)PyArray_GETPTR2(array, j, i);
+	} else {
+	    for (j=0; j<shape[1]; j++)
+	      for (i=0; i<shape[0]; i++)
+		INTEGER_A2(data, shape, i, j) = *(int *)PyArray_GETPTR2(array, j, i);
+	}
+      } else {
+	PyErr_SetString(PyExc_ValueError, "Array \"%s\" in arrays must have either 1 or 2 dimensions");
+	goto fail;
+      }
+
+      Py_DECREF(pykey);
+      Py_DECREF(array);
+    }
+    
+    Py_DECREF(iterator);
+
+  } else {
+    /* arrays has _fpointer attribute, so it's already a Fortran dictionary of arrays  */
+    fpointer = PyObject_GetAttrString(arrays, "_fpointer");
+    atomeye_atoms.allocated = 0; // we didn't allocate dictionary, so shouldn't deallocate it
+    if (PyArray_NDIM(fpointer) != 1) {
+      PyErr_SetString(PyExc_ValueError, "arrays._fpointer must have 1 dimension");
+      goto fail;
+    }
+    if (PyArray_DIM(fpointer, 0) != SIZEOF_FORTRAN_T) {
+      PyErr_SetString(PyExc_ValueError, "arrays._fpointer must have shape (SIZEOF_FORTRAN_T,)");
+      goto fail;
+    }
+    if (PyArray_TYPE(fpointer) != NPY_INT) {
+      PyErr_SetString(PyExc_ValueError, "arrays._fpointer must have type int");
+      goto fail;
+    }
+    for (i=0; i < SIZEOF_FORTRAN_T; i++)
+      atomeye_atoms.properties[i] = ((int*)PyArray_DATA(fpointer))[i];
+
+    Py_DECREF(fpointer);
+  }
+
   return 1;
 
  fail:
-  Py_XDECREF(n);                       
-  Py_XDECREF(properties);
   Py_XDECREF(fpointer);
-  Py_XDECREF(lattice);
+  Py_XDECREF(pykey);
+  Py_XDECREF(array);
+  Py_XDECREF(iterator);
   return 0;
 }
 
 static char atomeye_open_window_doc[]=
-  "iw = _atomeye.open_window(copy=-1,atoms=None,nowindow=) -- open a new AtomEye window";
+  "iw = _atomeye.open_window(copy=-1,n_atoms=0,cell=None,arrays=None,nowindow=0) -- open a new AtomEye window";
 
 static PyObject*
 atomeye_open_window(PyObject *self, PyObject *args)
 {
-  int icopy = -1, iw, argc;
+  int icopy = -1, iw, argc, nat = 0;
   char outstr[255];
   char *argv[3];
-  PyObject *pyat = NULL;
+  PyObject *cell = NULL, *arrays = NULL;
   static int atomeye_initialised = 0;
   int nowindow = 0;
 
-  if (!PyArg_ParseTuple(args, "|iOi", &icopy, &pyat, &nowindow))
+  if (!PyArg_ParseTuple(args, "|iiOOi", &icopy, &nat, &cell, &arrays, &nowindow))
     return NULL;
 
   if (!atomeye_initialised) {
+    atomeye_atoms.allocated = 0;
+
     argv[0] = (char *)malloc(20);
     argv[1] = (char *)malloc(20);
     argv[2] = (char *)malloc(20);
@@ -194,8 +273,8 @@ atomeye_open_window(PyObject *self, PyObject *args)
       argc = 3;
     }
   
-    if (pyat != NULL && pyat != Py_None) {
-      if (!update_atoms_structure(pyat)) return NULL;
+    if (arrays != NULL && arrays != Py_None) {
+      if (!update_atoms_structure(nat,cell,arrays)) return NULL;
       atomeyelib_init(argc, argv, &atomeye_atoms);
     } else
       atomeyelib_init(argc, argv, NULL);
@@ -302,20 +381,20 @@ atomeye_run_command(PyObject *self, PyObject *args)
 }
 
 static char atomeye_load_atoms_doc[]=
-  "_atomeye.load_atoms(iw, title, atoms) -- load atoms into AtomEye";
+  "_atomeye.load_atoms(iw, title, n_atoms, cell, arrays) -- load atoms into AtomEye";
 
 static PyObject*
 atomeye_load_atoms(PyObject *self, PyObject *args)
 {
-  int iw;
+  int iw, nat;
   char *title;
-  PyObject *pyat;
+  PyObject *cell, *arrays;
   char outstr[255];
   
-  if (!PyArg_ParseTuple(args, "isO", &iw, &title, &pyat))
+  if (!PyArg_ParseTuple(args, "isiOO", &iw, &title, &nat, &cell, &arrays))
     return NULL;
   
-  if (!update_atoms_structure(pyat)) return NULL;
+  if (!update_atoms_structure(nat, cell, arrays)) return NULL;
 
   if (!atomeyelib_queueevent(iw, ATOMEYELIB_LOAD_ATOMS, title, &atomeye_atoms, outstr)) {
     PyErr_SetString(PyExc_RuntimeError, outstr);    

@@ -10,10 +10,11 @@
 #include "libatoms.h"
 
 typedef struct {
-  fortran_t params[12];
-  fortran_t properties[12];
+  fortran_t params[SIZEOF_FORTRAN_T];
+  fortran_t properties[SIZEOF_FORTRAN_T];
   double lattice[3][3];
   int n_atom;
+  int allocated;
 } Atomeyelib_atoms;
 
 #define ATOMEYELIB_MAX_EVENTS 10

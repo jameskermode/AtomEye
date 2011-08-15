@@ -30,6 +30,10 @@ default_settings = {'n->xtal_mode': 1,
                     'key->BackSpace': 'load_config_backward'
                     }
 
+name_map = {'positions': 'pos',
+            'masses'   : 'mass',
+            'numbers'  : 'Z' }
+
 def on_click(iw, idx):
     if not iw in views:
         raise RuntimeError('Unexpected window id %d' % iw)
@@ -55,16 +59,16 @@ def on_new_window(iw):
     
 class AtomEyeView(object):
     def __init__(self, atoms=None, window_id=None, copy=None, frame=0, delta=1, property=None, arrows=None, nowindow=False,
-                 echo=False, block=False, fortran_indexing=True, verbose=True, *arrowargs, **arrowkwargs):
-        self.atoms_orig = atoms
+                 echo=False, block=False, verbose=True, *arrowargs, **arrowkwargs):
         self.atoms = atoms
         self.frame = frame
         self.delta = delta
         self.echo = echo
         self.block = block
-        self.fortran_indexing = fortran_indexing
+        self.fortran_indexing = False
         self.verbose = verbose
         self.is_alive = False
+        self.selection = []
 
         if window_id is None:
             self.start(copy, nowindow)
@@ -78,24 +82,58 @@ class AtomEyeView(object):
             view = self
 
         if property is not None or arrows is not None:
-            self.redraw(property=property, arrows=arrows, *arrowargs, **arrowkwargs)
+            self.show(obj=None, property=property, arrows=arrows, *arrowargs, **arrowkwargs)
+
+    def _convert_atoms(self):
+        self.current_atoms = None
+        if self.atoms is None:
+            title = '(null)'
+            n_atom = 0
+            cell = None
+            arrays = None
+        else:
+            if hasattr(self.atoms, '__iter__'):
+                self.current_atoms = self.atoms[self.frame]
+                fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
+                title = 'AtomsList[%s] len=%s' % (fmt % self.frame, fmt % len(self.atoms))
+            else:
+                title = 'Atoms'
+                self.current_atoms = self.atoms
+
+            n_atom = len(self.current_atoms)
+
+            self.fortran_indexing = False
+            try:
+                self.fortran_indexing = self.current_atoms.fortran_indexing
+            except AttributeError:
+                pass
+
+            cell = self.current_atoms.get_cell()
+            pbc = self.current_atoms.get_pbc()
+            pos = self.current_atoms.positions
+            
+            for i, p in enumerate(pbc):
+                if not p:
+                    cell[i,i] = max(1.0, 2*(pos[:,i].max()-pos[:,i].min()))
+
+            print 'Number of atoms: %d' % n_atom
+            print 'Fortran indexing: %r' % self.fortran_indexing
+            print 'Effective unit cell:'
+            print cell
+
+            try:
+                arrays = self.current_atoms.properties
+            except AttributeError:
+                arrays = {}
+                for key,value in self.current_atoms.arrays.iteritems():
+                    arrays[name_map.get(key,key)] = value
+            
+        return title, n_atom, cell, arrays
+        
             
     def start(self, copy=None, nowindow=False):
         if self.is_alive: return
-        
-        theat = None
-        if self.atoms is None:
-            title = '(null)'
-        else:
-            title = 'Atoms'
-            if hasattr(self.atoms, '__iter__'):
-                theat = self.atoms[self.frame]
-                fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
-                title = 'AtomsList[%s] len=%s' % (fmt % self.frame, fmt % len(self.atoms))
-
-            else:
-                title = 'Atoms'
-                theat = self.atoms
+        title, n_atom, cell, arrays = self._convert_atoms()
 
         icopy = -1
         if copy is not None:
@@ -106,9 +144,8 @@ class AtomEyeView(object):
             else:
                 raise TypeError('copy should be either an int or an AtomEye instance')
 
-        self.atoms_orig = self.atoms
         self.is_alive = False
-        self._window_id = _atomeye.open_window(icopy,theat,nowindow)
+        self._window_id = _atomeye.open_window(icopy,n_atom,cell,arrays,nowindow)
 
         views[self._window_id] = self
         while not self.is_alive:
@@ -118,19 +155,20 @@ class AtomEyeView(object):
         self.update(default_settings)
 
     def on_click(self, idx):
-        if self.atoms is None: return
-        theat = self.atoms
-        if hasattr(self.atoms, '__iter__'):
-            theat = self.atoms[self.frame]
-
-        if idx >= len(self.atoms_orig):
-            idx = idx % len(self.atoms_orig)
+        if self.current_atoms is None: return
+        if idx >= len(self.current_atoms):
+            idx = idx % len(self.current_atoms)
         if self.fortran_indexing:
             idx = idx + 1 # atomeye uses zero based indices
 
+        self.selection.append(idx)
+
         if self.verbose:
-            print 
-            print theat[idx]
+            print
+            try:
+                self.current_atoms.print_atom(idx)
+            except AttributeError:
+                print self.current_atoms[idx]
             sys.stdout.flush()
 
     def on_advance(self, mode):
@@ -156,7 +194,7 @@ class AtomEyeView(object):
 
         print 'setting frame to %d' % self.frame
         sys.stdout.flush()
-        self.redraw()
+        self.show()
 
         if self.verbose:
             print
@@ -172,9 +210,14 @@ class AtomEyeView(object):
             view = None
         del views[self._window_id]
 
-    def show(self, obj, property=None, frame=None, arrows=None, *arrowargs, **arrowkwargs):
-        self.atoms = obj
-        if hasattr(obj,'__iter__'):
+    def show(self, obj=None, property=None, frame=None, arrows=None, *arrowargs, **arrowkwargs):
+        if not self.is_alive:
+            raise RuntimeError('is_alive is False')
+
+        if obj is not None:
+            self.atoms = obj
+        
+        if hasattr(self.atoms,'__iter__'):
             if frame is not None:
                 if frame < 0: frame = len(self.atoms)-frame
                 if frame >= len(self.atoms):
@@ -183,25 +226,7 @@ class AtomEyeView(object):
                     except IndexError:
                         frame=len(self.atoms)-1
                 self.frame = frame
-                
-        self.redraw(property=property, arrows=arrows, *arrowargs, **arrowkwargs)
-
-    
-    def redraw(self, property=None, arrows=None, *arrowargs, **arrowkwargs):
-        if not self.is_alive:
-            raise RuntimeError('is_alive is False')
-
-        if self.atoms is None:
-            raise RuntimeError('Nothing to view -- set self.atoms to Atoms or sequence of Atoms')
-
-        theat = self.atoms
-        if hasattr(self.atoms, '__iter__'):
-            theat = self.atoms[self.frame]
-            fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
-            title = 'AtomsList[%s] len=%s' % (fmt % self.frame, fmt % len(self.atoms))
-        else:
-            title = 'Atoms'
-
+       
         if property is not None:
             if isinstance(property,str):
                 pass
@@ -217,8 +242,8 @@ class AtomEyeView(object):
                 self.atoms.add_property('_show', property)
                 property = '_show'
 
-        self.atoms_orig = theat
-        _atomeye.load_atoms(self._window_id, title, theat)
+        title, n_atom, cell, arrays = self._convert_atoms()
+        _atomeye.load_atoms(self._window_id, title, n_atom, cell, arrays)
         if property is not None:
             self.aux_property_coloring(property)
         if arrows is not None:
@@ -298,7 +323,7 @@ class AtomEyeView(object):
 
     def toggle_small_cell_mode(self):
         self.run_command("toggle_small_cell_mode")
-        self.redraw()
+        self.show()
 
     def normal_coloring(self):
         self.run_command("normal_coloring")
