@@ -73,6 +73,8 @@ quip_arch = os.environ['QUIP_ARCH']
 if 'QUIPPY_LDFLAGS' in makefile:
     atomeye_extra_link_args.extend(makefile['QUIPPY_LDFLAGS'].split())
 
+sizeof_fortran_t = makefile['SIZEOF_FORTRAN_T']
+
 setup(name='atomeye',
       py_modules = ['atomeye'],
       ext_modules = [Extension(name='_atomeye',
@@ -80,7 +82,7 @@ setup(name='atomeye',
                                library_dirs=atomeye_libdirs,
                                libraries=atomeye_libs,
                                include_dirs=[os.path.join(atomeye_dir,'include'), os.path.join(quip_root_dir,'libAtoms')],
-                               define_macros=[],
+                               define_macros=[('SIZEOF_FORTRAN_T', sizeof_fortran_t)],
                                extra_link_args=atomeye_extra_link_args,
                                depends=[os.path.join(atomeye_dir, 'lib/libAtomEye.a')])
                      ],
