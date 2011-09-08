@@ -231,14 +231,14 @@ class AtomEyeView(object):
             if isinstance(property,str):
                 pass
             elif isinstance(property,int):
-                if theat.has_property('_show'):
-                    theat.remove_property('_show')
-                theat.add_property('_show', False)
-                theat._show[:] = [i == property for i in frange(theat.n)]
+                if self.atoms.has_property('_show'):
+                    self.atoms.remove_property('_show')
+                self.atoms.add_property('_show', False)
+                self.atoms._show[:] = [i == property for i in frange(self.atoms.n)]
                 property = '_show'
             else:
-                if theat.has_property('_show'):
-                    theat.remove_property('_show')
+                if self.atoms.has_property('_show'):
+                    self.atoms.remove_property('_show')
                 self.atoms.add_property('_show', property)
                 property = '_show'
 
