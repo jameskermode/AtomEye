@@ -57,12 +57,12 @@ os.system('cd %s && make -p atomeyelib > %s/make.log' % (atomeye_dir, os.getcwd(
 makefile = parse_makefile('make.log')
 os.unlink('make.log')
 
-syslibs = makefile['SYSLIBS']
+syslibs = makefile['ATOMEYE_LIBS']
 syslibs = expand_addprefix(syslibs)
 syslibs = expand_addsuffix(syslibs)
 syslibs = syslibs.split()
 
-atomeye_libs = ['m', 'Xpm', 'Xext', 'X11', 'mpi', 'png', 'z', 'jpeg', 'history', 'ncurses', 'readline'] + [ f[2:] for f in syslibs if f.startswith('-l') ]
+atomeye_libs = [ f[2:] for f in syslibs if f.startswith('-l') ]
 atomeye_libdirs = [ f[2:] for f in syslibs if f.startswith('-L') ]
 atomeye_internal_libs = ['%s/lib%s.a' % (os.path.join(atomeye_dir, 'lib'), lib) for lib in [ 'AtomEye', 'AX', 'Atoms', 'VecMat3', 'VecMat', 'IO', 'Scalar', 'Timer'] ]
 atomeye_extra_link_args = atomeye_internal_libs + [ f for f in syslibs if not f.startswith('-l') and not f.startswith('-L')]
