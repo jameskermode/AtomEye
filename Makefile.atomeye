@@ -9,7 +9,6 @@ ifeq (${HAVE_QUIP},1)
   CFLAGS += -fPIC -DHAVE_LIBATOMS
   FC = ${F77}
   LD = ${LINKER}
-  SYSLIBS += ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -L${QUIP_ROOT}/build.${QUIP_ARCH}
 else
   SVN_VERSION := -D'SVN_VERSION="$(shell svnversion -n ..)"'
   CFLAGS += ${SVN_VERSION}
@@ -20,9 +19,7 @@ export CC
 export FC
 export LD
 
-#ATOMEYE_LIBS = -static -lm -lXpm -lXext -lX11 -lmpi -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl ${SYSLIBS}
-
-ATOMEYE_LIBS = -lm /opt/local/lib/libXpm.a /opt/local/lib/libXext.a /opt/local/lib/libX11.a /opt/local/lib/libxcb.a /opt/local/lib/libXau.a /opt/local/lib/libXdmcp.a /opt/local/lib/libpng.a /opt/local/lib/libz.a /opt/local/lib/libjpeg.a /opt/local/lib/libhistory.a /opt/local/lib/libncurses.a /opt/local/lib/libreadline.a /opt/local/lib/libcurl.a /opt/local/lib/libnetcdf.a /opt/local/lib/libhdf5.a /opt/local/lib/libhdf5_hl.a -framework Accelerate /opt/local/lib/libjpeg.a /opt/local/lib/libz.a /opt/local/lib/libsz.a /opt/local/lib/libcurl.a ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a /opt/local/lib/libidn.a /opt/local/lib/libssl.a /opt/local/lib/libiconv.a /opt/local/lib/libcrypto.a /opt/local/lib/libintl.a -framework CoreFoundation -static-libgfortran -static-libgcc 
+ATOMEYE_LIBS = ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -L${QUIP_ROOT}/build.${QUIP_ARCH} -lm -lXpm -lXext -lX11 -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl -L/usr/local/lib/ ${SYSLIBS} -lgfortran /usr/local/lib/libcblas.a
 
 export ATOMEYE_LIBS
 
