@@ -19,7 +19,7 @@ export CC
 export FC
 export LD
 
-ATOMEYE_LIBS = ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -L${QUIP_ROOT}/build.${QUIP_ARCH} -lm -lXpm -lXext -lX11 -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl -L/usr/local/lib/ ${SYSLIBS} -lgfortran /usr/local/lib/libcblas.a
+ATOMEYE_LIBS = ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -L${QUIP_ROOT}/build.${QUIP_ARCH} -lm -lXpm -lXext -lX11 -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl -L/usr/local/lib/ ${SYSLIBS}
 
 export ATOMEYE_LIBS
 
