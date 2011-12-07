@@ -18,10 +18,79 @@
 
 """This module provides a high-level interface to the AtomEye extension module :mod:`_atomeye`. """
 
-import _atomeye, sys, numpy, time
+import sys
+import numpy
+import time
+import imp
+import os
+import os.path
+import shutil
+import sys
+import tempfile
 from math import ceil, log10
 
-ATOMEYE_MAX_AUX_PROPS = 48
+
+def _tmp_pkg(dir=None):
+    """
+    Create a temporary package.
+
+    Returns (name, path)
+    """
+    while True:
+        path = tempfile.mkdtemp(dir=dir)
+        name = os.path.basename(path)
+        try:
+            modinfo = imp.find_module(name)
+            # if name is found, delete and try again
+            os.rmdir(path)
+        except:
+            break
+    init = file(os.path.join(path, '__init__.py'), 'w')
+    init.close()
+    return name, path
+
+
+class MExt(object):
+    """
+    Load a unique copy of a module that can be treated as a "class instance".
+
+    Adapted from code posted by Tod. A. Smith <Tod.A.Smith@aadc.com> to
+    http://cens.ioc.ee/pipermail/f2py-users/2004-September/000921.html
+    """
+
+    def __init__(self, name):
+        self.name = name
+        # first find the "real" module on the "real" syspath
+        srcfile, srcpath, srcdesc = imp.find_module(name)
+        # now create a temp directory for the bogus package
+        self._pkgname, self._pkgdir = _tmp_pkg('.')
+        # copy the original module to the new package
+        shutil.copy(srcpath, self._pkgdir)
+        # import the module
+        # __import__ returns the package, not the sub-module
+        self._pkg = __import__(self._pkgname, globals(), locals(), [self.name])
+        # return the module object
+        self._module = getattr(self._pkg, self.name)
+        # now add the module's stuff to this class
+        self.__dict__.update(self._module.__dict__)
+
+    def __del__(self):
+        # remove module
+        import sys, shutil
+        del sys.modules[self._module.__name__]
+        del sys.modules[self._pkg.__name__]
+        # now try to delete the files and directory
+        shutil.rmtree(self._pkgdir)
+        # make sure the original module is loaded -
+        # otherwise python crashes on exit
+        # if MExt objects have not been explicitly 'del'd,
+        # and __del__ is occurring on python shutdown, the import will fail
+        # and the exception is caught here
+        try:
+            __import__(self.name)
+        except:
+            pass
+
 
 default_settings = {'n->xtal_mode': 1,
                     'n->suppress_printout': 1,
@@ -144,14 +213,18 @@ class AtomEyeView(object):
             else:
                 raise TypeError('copy should be either an int or an AtomEye instance')
 
+        # create our own unique version of the _atomeye extension module
+        self._atomeye = MExt('_atomeye')
+        self._atomeye.set_handlers(on_click, on_close, on_advance, on_new_window)
+
         self.is_alive = False
-        self._window_id = _atomeye.open_window(icopy,n_atom,cell,arrays,nowindow)
+        self._window_id = self._atomeye.open_window(icopy,n_atom,cell,arrays,nowindow)
 
         views[self._window_id] = self
         while not self.is_alive:
             time.sleep(0.1)
         time.sleep(0.3)
-        _atomeye.set_title(self._window_id, title)
+        self._atomeye.set_title(self._window_id, title)
         self.update(default_settings)
 
     def on_click(self, idx):
@@ -243,7 +316,7 @@ class AtomEyeView(object):
                 property = '_show'
 
         title, n_atom, cell, arrays = self._convert_atoms()
-        _atomeye.load_atoms(self._window_id, title, n_atom, cell, arrays)
+        self._atomeye.load_atoms(self._window_id, title, n_atom, cell, arrays)
         if property is not None:
             self.aux_property_coloring(property)
         if arrows is not None:
@@ -254,7 +327,7 @@ class AtomEyeView(object):
             raise RuntimeError('is_alive is False')
         if self.echo:
             print command.strip()
-        _atomeye.run_command(self._window_id, command)
+        self._atomeye.run_command(self._window_id, command)
         if self.block:
             self.wait()
 
@@ -451,12 +524,9 @@ class AtomEyeView(object):
         """Sleep until this AtomEye viewer has finished processing all queued events."""
         if not self.is_alive: 
             raise RuntimeError('is_alive is False')
-        _atomeye.wait(self._window_id)
+        self._atomeye.wait(self._window_id)
 
 views = {}
-_atomeye.set_handlers(on_click, on_close, on_advance, on_new_window)
-
-
 view = None
 
 def show(obj, property=None, frame=0, window_id=None, nowindow=False, arrows=None, verbose=True, *arrowargs, **arrowkwargs):
