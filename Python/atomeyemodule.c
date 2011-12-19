@@ -35,56 +35,56 @@ static PyObject *on_new_pyfunc = NULL;
 
 static Atomeyelib_atoms atomeye_atoms;
 
-static void on_click_atom(int iw, int atom)
+static void on_click_atom(int mod_id, int iw, int atom)
 {
   PyObject *arglist;
   PyGILState_STATE state;
 
   state = PyGILState_Ensure();
   if (on_click_atom_pyfunc != NULL) {
-    arglist = Py_BuildValue("(i,i)", iw, atom);       
+    arglist = Py_BuildValue("(i,i,i)", mod_id, iw, atom);       
     PyEval_CallObject(on_click_atom_pyfunc, arglist); 
     Py_DECREF(arglist);                               
   }
   PyGILState_Release(state);
 }
 
-static void on_close(int iw)
+static void on_close(int mod_id, int iw)
 {
   PyObject *arglist;
   PyGILState_STATE state;
 
   state = PyGILState_Ensure();
   if (on_close_pyfunc != NULL) {
-    arglist = Py_BuildValue("(i)", iw);
+    arglist = Py_BuildValue("(i,i)", mod_id, iw);
     PyEval_CallObject(on_close_pyfunc, arglist);
     Py_DECREF(arglist);
   }
   PyGILState_Release(state);
 }
 
-static void on_advance(int iw, char *instr)
+static void on_advance(int mod_id, int iw, char *instr)
 {
   PyObject *arglist;
   PyGILState_STATE state;
 
   state = PyGILState_Ensure();
   if (on_advance_pyfunc != NULL) {
-    arglist = Py_BuildValue("(i,s)", iw, instr);
+    arglist = Py_BuildValue("(i,i,s)", mod_id, iw, instr);
     PyEval_CallObject(on_advance_pyfunc, arglist);
     Py_DECREF(arglist);                           
   }
   PyGILState_Release(state);
 }
 
-static void on_new(int iw)
+static void on_new(int mod_id, int iw)
 {
   PyObject *arglist;
   PyGILState_STATE state;
 
   state = PyGILState_Ensure();
   if (on_new_pyfunc != NULL) {
-    arglist = Py_BuildValue("(i)", iw);
+    arglist = Py_BuildValue("(i,i)", mod_id, iw);
     PyEval_CallObject(on_new_pyfunc, arglist);
     Py_DECREF(arglist);                       
   }
@@ -244,19 +244,19 @@ static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
 }
 
 static char atomeye_open_window_doc[]=
-  "iw = _atomeye.open_window(copy=-1,n_atoms=0,cell=None,arrays=None,nowindow=0) -- open a new AtomEye window";
+  "iw = _atomeye.open_window(mod_id=0, copy=-1,n_atoms=0,cell=None,arrays=None,nowindow=0) -- open a new AtomEye window";
 
 static PyObject*
 atomeye_open_window(PyObject *self, PyObject *args)
 {
-  int icopy = -1, iw, argc, nat = 0;
+  int mod_id = 0, icopy = -1, iw, argc, nat = 0;
   char outstr[255];
   char *argv[3];
   PyObject *cell = NULL, *arrays = NULL;
   static int atomeye_initialised = 0;
   int nowindow = 0;
 
-  if (!PyArg_ParseTuple(args, "|iiOOi", &icopy, &nat, &cell, &arrays, &nowindow))
+  if (!PyArg_ParseTuple(args, "|iiiOOi", &mod_id, &icopy, &nat, &cell, &arrays, &nowindow))
     return NULL;
 
   if (!atomeye_initialised) {
@@ -288,7 +288,7 @@ atomeye_open_window(PyObject *self, PyObject *args)
     atomeye_initialised = 1;
   }
 
-  iw = atomeyelib_open_window(icopy);
+  iw = atomeyelib_open_window(mod_id, icopy);
 
   if (iw == -1) {
     sprintf(outstr, "Bad copy window id %d", icopy);

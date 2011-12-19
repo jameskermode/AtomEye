@@ -888,7 +888,7 @@ void thread_start (void *icopy)
     }
 #ifdef ATOMEYE_LIB
     /* Initialisation complete */
-    (*atomeyelib_on_new)(iw);    
+    (*atomeyelib_on_new)(atomeyelib_mod_id, iw);    
 #endif
     for (nontrivial_event = TRUE;;)
     { /* blocking is more CPU efficient */

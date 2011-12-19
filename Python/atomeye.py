@@ -27,6 +27,8 @@ import os.path
 import shutil
 import sys
 import tempfile
+import weakref
+import atexit
 from math import ceil, log10
 
 
@@ -47,10 +49,14 @@ def _tmp_pkg(dir=None):
             break
     init = file(os.path.join(path, '__init__.py'), 'w')
     init.close()
+
+    # remove directory at exit
+    atexit.register(shutil.rmtree, path)
+    
     return name, path
 
 
-class MExt(object):
+class MultipleExtMod(object):
     """
     Load a unique copy of a module that can be treated as a "class instance".
 
@@ -71,26 +77,8 @@ class MExt(object):
         self._pkg = __import__(self._pkgname, globals(), locals(), [self.name])
         # return the module object
         self._module = getattr(self._pkg, self.name)
-        # now add the module's stuff to this class
+        # now add the module's stuff to this class instance
         self.__dict__.update(self._module.__dict__)
-
-    def __del__(self):
-        # remove module
-        import sys, shutil
-        del sys.modules[self._module.__name__]
-        del sys.modules[self._pkg.__name__]
-        # now try to delete the files and directory
-        shutil.rmtree(self._pkgdir)
-        # make sure the original module is loaded -
-        # otherwise python crashes on exit
-        # if MExt objects have not been explicitly 'del'd,
-        # and __del__ is occurring on python shutdown, the import will fail
-        # and the exception is caught here
-        try:
-            __import__(self.name)
-        except:
-            pass
-
 
 default_settings = {'n->xtal_mode': 1,
                     'n->suppress_printout': 1,
@@ -103,31 +91,14 @@ name_map = {'positions': 'pos',
             'masses'   : 'mass',
             'numbers'  : 'Z' }
 
-def on_click(iw, idx):
-    if not iw in views:
-        raise RuntimeError('Unexpected window id %d' % iw)
-    views[iw].on_click(idx)
+viewers = {}
+
+class AtomEyeViewer(object):
+
+    n_ext_modules = 0
     
-
-def on_advance(iw, mode):
-    if not iw in views:
-        raise RuntimeError('Unexpected window id %d' % iw)
-    views[iw].on_advance(mode)
-
-def on_close(iw):
-    if not iw in views:
-        raise RuntimeError('Unexpected window id %d' % iw)
-    views[iw].on_close()
-
-
-def on_new_window(iw):
-    if iw in views:
-        views[iw].is_alive = True
-    else:
-        views[iw] = AtomEyeView(window_id=iw)
-    
-class AtomEyeView(object):
-    def __init__(self, atoms=None, window_id=None, copy=None, frame=0, delta=1, property=None, arrows=None, nowindow=False,
+    def __init__(self, atoms=None, viewer_id=None, copy=None, frame=0, delta=1,
+                 property=None, arrows=None, nowindow=False,
                  echo=False, block=False, verbose=True, *arrowargs, **arrowkwargs):
         self.atoms = atoms
         self.frame = frame
@@ -139,16 +110,13 @@ class AtomEyeView(object):
         self.is_alive = False
         self.selection = []
 
-        if window_id is None:
+        if viewer_id is None:
             self.start(copy, nowindow)
         else:
-            self._window_id = window_id
+            self._viewer_id = viewer_id
+            self._window_id = viewer_id[1]
             self.is_alive = True
-            views[self._window_id] = self
-
-        global view
-        if view is None:
-            view = self
+            viewers[self._viewer_id] = self
 
         if property is not None or arrows is not None:
             self.show(obj=None, property=property, arrows=arrows, *arrowargs, **arrowkwargs)
@@ -214,20 +182,31 @@ class AtomEyeView(object):
                 raise TypeError('copy should be either an int or an AtomEye instance')
 
         # create our own unique version of the _atomeye extension module
-        self._atomeye = MExt('_atomeye')
-        self._atomeye.set_handlers(on_click, on_close, on_advance, on_new_window)
+        self._atomeye = MultipleExtMod('_atomeye')
+        self._atomeye.set_handlers(AtomEyeViewer.on_click,
+                                   AtomEyeViewer.on_close,
+                                   AtomEyeViewer.on_advance,
+                                   AtomEyeViewer.on_new_window)
 
         self.is_alive = False
-        self._window_id = self._atomeye.open_window(icopy,n_atom,cell,arrays,nowindow)
-
-        views[self._window_id] = self
+        self._window_id = self._atomeye.open_window(AtomEyeViewer.n_ext_modules,icopy,n_atom,cell,arrays,nowindow)
+        self._viewer_id = (AtomEyeViewer.n_ext_modules, self._window_id)
+        viewers[self._viewer_id] = self
+        if AtomEyeViewer.n_ext_modules == 0:
+            viewers['default'] = viewers[self._viewer_id]
+        AtomEyeViewer.n_ext_modules += 1        
         while not self.is_alive:
             time.sleep(0.1)
         time.sleep(0.3)
         self._atomeye.set_title(self._window_id, title)
         self.update(default_settings)
 
-    def on_click(self, idx):
+    @staticmethod
+    def on_click(mod, iw, idx):
+        if (mod,iw) not in viewers:
+            raise RuntimeError('Unexpected module id %d or window id %d' % (mod, iw))
+        self = viewers[(mod,iw)]
+        
         if self.current_atoms is None: return
         if idx >= len(self.current_atoms):
             idx = idx % len(self.current_atoms)
@@ -244,7 +223,12 @@ class AtomEyeView(object):
                 print self.current_atoms[idx]
             sys.stdout.flush()
 
-    def on_advance(self, mode):
+    @staticmethod
+    def on_advance(mod, iw, mode):
+        if (mod,iw) not in viewers:
+            raise RuntimeError('Unexpected window id %d' % iw)
+        self = viewers[(mod, iw)]
+        
         if not hasattr(self.atoms,'__iter__'): return
 
         if mode == 'forward':
@@ -274,14 +258,27 @@ class AtomEyeView(object):
             print self.atoms[self.frame].params
             sys.stdout.flush()
 
-
-    def on_close(self):
-        global view
-        
+    @staticmethod
+    def on_close(mod, iw):
+        print 'closing atomeye viewer', mod, iw
+        if (mod, iw) not in viewers:
+            raise RuntimeError('Unexpected window id %d' % iw)
+        self = viewers[(mod,iw)]
         self.is_alive = False
-        if view is self:
-            view = None
-        del views[self._window_id]
+        del viewers[self._viewer_id]
+        if viewers['default'] is self:
+            # check if we were the default viewer
+            del viewers['default']
+            if len(viewers) > 0:
+                viewers['default'] = viewers.values()[0]
+
+    @staticmethod
+    def on_new_window(mod, iw):
+        if (mod,iw) in viewers:
+            viewers[(mod,iw)].is_alive = True
+        else:
+            new_viewer = AtomEyeViewer(viewer_id=(mod,iw))
+            
 
     def show(self, obj=None, property=None, frame=None, arrows=None, *arrowargs, **arrowkwargs):
         if not self.is_alive:
@@ -526,31 +523,46 @@ class AtomEyeView(object):
             raise RuntimeError('is_alive is False')
         self._atomeye.wait(self._window_id)
 
-views = {}
-view = None
 
-def show(obj, property=None, frame=0, window_id=None, nowindow=False, arrows=None, verbose=True, *arrowargs, **arrowkwargs):
-    """Convenience function to show obj in the default AtomEye view
+def show(obj, property=None, frame=0, viewer=None, viewer_id=None,
+         nowindow=False, newwindow=False, arrows=None, verbose=True, *arrowargs, **arrowkwargs):
+    """Show `obj` with AtomEye, opening a new window if necessary.
 
-    If window_id is not None, then this window will be used. Otherwise
-    the default window is used, initialising it if necessary.
-    
-    Returns instance of AtomEyeView."""
-    global view
+    The viewer to be used is the first item on the following list which is defined:
 
-    # if window_id was passed in, then use that window
-    if window_id is not None:
-        views[window_id].show(obj, property, frame)
-        return views[window_id]
+      1. `viewer` argument - should be an AtomEyeViewer instance
+      2. `viewer_id` argument - should be a tuple (module_id, viewer_id) used as a key in atomeye.viewers
+      3. `obj.viewer` attribute - should be a weak reference to an AtomEyeViewer instance
+      4. The default viewer - `atomeye.viewers["default"]`
 
-    # otherwise use the default viewer, initialising it if necessary
-    if view is None:
-        if views.keys():
-            view = views[views.keys()[0]]
-            view.show(obj, property, frame)
-        else:
-            view = AtomEyeView(obj, property=property, frame=frame, nowindow=nowindow, arrows=arrows, verbose=verbose, *arrowargs, **arrowkwargs)
+    If no viewers exist, or if newwindow=True, a new viewer is created.
+    In all cases, the instance of AtomEyeViewer used is returned."""
+
+    if not newwindow:
+        # if viewer_id was passed in, then use that window
+        if viewer is None and viewer_id is not None:
+            viewer = viewers[viewer_id]
+
+        # if obj has been viewed before, viewer will have been saved with weak reference
+        if viewer is None and hasattr(obj, 'viewer') and type(obj.viewer) is weakref.ref:
+            viewer = obj.viewer() 
+
+        if viewer is None and 'default' in viewers:
+            # Use default (i.e. first created) viewer
+            viewer = viewers['default']
+
+    if viewer is None:
+        # We need to create a new viewer
+        viewer = AtomEyeViewer(obj,
+                               property=property,
+                               frame=frame,
+                               nowindow=nowindow,
+                               arrows=arrows,
+                               verbose=verbose, *arrowargs, **arrowkwargs)
     else:
-        view.show(obj, property, frame, arrows=arrows, *arrowargs, **arrowkwargs)
+        viewer.show(obj, property, frame, arrows=arrows, *arrowargs, **arrowkwargs)
 
-    return view
+    obj.viewer = weakref.ref(viewer) # save a reference to viewer for next time
+    return viewer
+
+
