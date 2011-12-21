@@ -93,13 +93,14 @@ name_map = {'positions': 'pos',
 
 viewers = {}
 
+CONFIG_MAX_AUXILIARY = 64
+
 class AtomEyeViewer(object):
 
     n_ext_modules = 0
     
     def __init__(self, atoms=None, viewer_id=None, copy=None, frame=0, delta=1,
-                 property=None, arrows=None, nowindow=False,
-                 echo=False, block=False, verbose=True, *arrowargs, **arrowkwargs):
+                 nowindow=False, echo=False, block=False, verbose=True, **showargs):
         self.atoms = atoms
         self.frame = frame
         self.delta = delta
@@ -118,8 +119,7 @@ class AtomEyeViewer(object):
             self.is_alive = True
             viewers[self._viewer_id] = self
 
-        if property is not None or arrows is not None:
-            self.show(obj=None, property=property, arrows=arrows, *arrowargs, **arrowkwargs)
+        self.show(obj=None, **showargs)
 
     def _convert_atoms(self):
         self.current_atoms = None
@@ -166,7 +166,33 @@ class AtomEyeViewer(object):
                     arrays[name_map.get(key,key)] = value
             
         return title, n_atom, cell, arrays
+
+
+    def _check_property_columns(self, auxprop):
+        """
+        Ensure auxprop is one of the first AUX_PROPERTY_COLORING
+        columns in self.current_atoms by swapping it with an
+        inessential property if necessary.
+        """
+            
+        if not hasattr(self.current_atoms, 'properties'):
+            return
         
+        prop_idx = 0
+        for key, value in self.current_atoms.properties.iteritems():
+            ncols = len(value.shape) == 2 and value.shape[0] or 1
+            prop_idx += ncols
+            if key.lower() == auxprop.lower():
+                break
+        else:
+            raise ValueError('Unknown Atoms property %s' % auxprop)
+
+        if prop_idx >= CONFIG_MAX_AUXILIARY:
+            for swapprop in self.current_atoms.properties:
+                if swapprop.lower() not in ['pos', 'z', 'species']:
+                    break
+            self.current_atoms.properties.swap(auxprop, swapprop)
+
             
     def start(self, copy=None, nowindow=False):
         if self.is_alive: return
@@ -280,7 +306,7 @@ class AtomEyeViewer(object):
             new_viewer = AtomEyeViewer(viewer_id=(mod,iw))
             
 
-    def show(self, obj=None, property=None, frame=None, arrows=None, *arrowargs, **arrowkwargs):
+    def show(self, obj=None, property=None, frame=None, arrows=None):
         if not self.is_alive:
             raise RuntimeError('is_alive is False')
 
@@ -296,28 +322,27 @@ class AtomEyeViewer(object):
                     except IndexError:
                         frame=len(self.atoms)-1
                 self.frame = frame
-       
-        if property is not None:
-            if isinstance(property,str):
-                pass
-            elif isinstance(property,int):
-                if self.atoms.has_property('_show'):
-                    self.atoms.remove_property('_show')
-                self.atoms.add_property('_show', False)
-                self.atoms._show[:] = [i == property for i in frange(self.atoms.n)]
-                property = '_show'
-            else:
-                if self.atoms.has_property('_show'):
-                    self.atoms.remove_property('_show')
-                self.atoms.add_property('_show', property)
-                property = '_show'
 
-        title, n_atom, cell, arrays = self._convert_atoms()
+        title, n_atom, cell, arrays = self._convert_atoms() # also sets self.current_atoms
+                
+        if property is not None and not isinstance(property,str) and hasattr(self.current_atoms, 'properties'):
+            if isinstance(property,int):
+                _show = [i == property for i in self.current_atoms.indices]
+            elif isinstance(property, list) or isinstance(property, tuple) or isinstance(property, set):
+                _show = [i in property for i in self.current_atoms.indices]
+            else:
+                _show = property
+
+            if self.current_atoms.has_property('_show'):
+                self.current_atoms.remove_property('_show')
+            self.current_atoms.add_property('_show', _show)
+            property = '_show'
+
         self._atomeye.load_atoms(self._window_id, title, n_atom, cell, arrays)
         if property is not None:
             self.aux_property_coloring(property)
         if arrows is not None:
-            self.draw_arrows(arrows, *arrowargs, **arrowkwargs)
+            self.draw_arrows(arrows)
 
     def run_command(self, command):
         if not self.is_alive: 
@@ -399,6 +424,7 @@ class AtomEyeViewer(object):
         self.run_command("normal_coloring")
 
     def aux_property_coloring(self, auxprop):
+        self._check_property_columns(auxprop)
         self.run_command("aux_property_coloring %s" % str(auxprop))
 
     def central_symmetry_coloring(self):
@@ -511,9 +537,10 @@ class AtomEyeViewer(object):
         self.run_command("change_shear_strain_subtract_mean")
 
     def draw_arrows(self, property, scale_factor=0.0, head_height=0.1, head_width=0.05, up=(0.0,1.0,0.0)):
-        if property == 'off':
+        if property is None:
             self.run_command('draw_arrows off')
         else:
+            self._check_property_columns(property)
             self.run_command('draw_arrows %s %f %f %f %f %f %f' %
                              (str(property), scale_factor, head_height, head_width, up[0], up[1], up[2]))
 
@@ -524,14 +551,13 @@ class AtomEyeViewer(object):
         self._atomeye.wait(self._window_id)
 
 
-def show(obj, property=None, frame=0, viewer=None, viewer_id=None,
-         nowindow=False, newwindow=False, arrows=None, verbose=True, *arrowargs, **arrowkwargs):
+def show(obj, property=None, frame=0, viewer=None,
+         nowindow=False, newwindow=False, arrows=None, verbose=True):
     """Show `obj` with AtomEye, opening a new window if necessary.
 
     The viewer to be used is the first item on the following list which is defined:
 
       1. `viewer` argument - should be an AtomEyeViewer instance
-      2. `viewer_id` argument - should be a tuple (module_id, viewer_id) used as a key in atomeye.viewers
       3. `obj.viewer` attribute - should be a weak reference to an AtomEyeViewer instance
       4. The default viewer - `atomeye.viewers["default"]`
 
@@ -539,10 +565,6 @@ def show(obj, property=None, frame=0, viewer=None, viewer_id=None,
     In all cases, the instance of AtomEyeViewer used is returned."""
 
     if not newwindow:
-        # if viewer_id was passed in, then use that window
-        if viewer is None and viewer_id is not None:
-            viewer = viewers[viewer_id]
-
         # if obj has been viewed before, viewer will have been saved with weak reference
         if viewer is None and hasattr(obj, 'viewer') and type(obj.viewer) is weakref.ref:
             viewer = obj.viewer() 
@@ -554,13 +576,16 @@ def show(obj, property=None, frame=0, viewer=None, viewer_id=None,
     if viewer is None:
         # We need to create a new viewer
         viewer = AtomEyeViewer(obj,
+                               verbose=verbose,
+                               nowindow=nowindow,
                                property=property,
                                frame=frame,
-                               nowindow=nowindow,
-                               arrows=arrows,
-                               verbose=verbose, *arrowargs, **arrowkwargs)
+                               arrows=arrows)
     else:
-        viewer.show(obj, property, frame, arrows=arrows, *arrowargs, **arrowkwargs)
+        viewer.show(obj,
+                    property=property,
+                    frame=frame,
+                    arrows=arrows)
 
     obj.viewer = weakref.ref(viewer) # save a reference to viewer for next time
     return viewer
