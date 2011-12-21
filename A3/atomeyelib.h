@@ -29,17 +29,19 @@ typedef struct {
 #define ATOMEYELIB_MAX_EVENT_ID 5
 
 
-extern void (*atomeyelib_on_click_atom)(int iw, int atom);
-extern void (*atomeyelib_on_close)(int iw);
-extern void (*atomeyelib_on_advance)(int iw, char *instr);
-extern void (*atomeyelib_on_new)(int iw);
+extern void (*atomeyelib_on_click_atom)(int mod_iw, int iw, int atom);
+extern void (*atomeyelib_on_close)(int mod_id, int iw);
+extern void (*atomeyelib_on_advance)(int mod_id, int iw, char *instr);
+extern void (*atomeyelib_on_new)(int mod_it, int iw);
+
+extern int atomeyelib_mod_id;
 
 int atomeyelib_init(int argc, char* argv[], Atomeyelib_atoms* data);
-void atomeyelib_set_handlers(void (*on_click)(int iw, int atom), 
-			     void (*on_close)(int iw), 
-			     void (*on_advance)(int iw, char *instr),
-			     void (*on_new)(int iw));
-int atomeyelib_open_window(int icopy);
+void atomeyelib_set_handlers(void (*on_click)(int mod_id, int iw, int atom), 
+			     void (*on_close)(int mod_id, int iw), 
+			     void (*on_advance)(int mod_id, int iw, char *instr),
+			     void (*on_new)(int mod_id, int iw));
+int atomeyelib_open_window(int mod_id, int icopy);
 void atomeyelib_set_title(int iw, char *title);
 int atomeyelib_treatevent(int iw);
 int atomeyelib_queueevent(int iw, int event, char *instr, Atomeyelib_atoms *data, char *outstr);

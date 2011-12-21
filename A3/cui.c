@@ -29,10 +29,20 @@ static int frontend = -1;
 #define nonvacant(iw) (AX_cid[iw]!=0)
 
 #ifdef ATOMEYE_LIB
-void (*atomeyelib_on_click_atom)(int iw, int atom);
-void (*atomeyelib_on_close)(int iw);
-void (*atomeyelib_on_advance)(int iw, char *instr);
-void (*atomeyelib_on_new)(int iw);
+#include "atomeyelib.h"
+#include "libatoms.h"
+
+Atomeyelib_events atomeyelib_events[AX_MAXWIN][ATOMEYELIB_MAX_EVENTS];
+int atomeyelib_n_events[AX_MAXWIN];
+int atomeyelib_q_head[AX_MAXWIN];
+int atomeyelib_q_tail[AX_MAXWIN];
+extern bool guess_to_be_PBC;
+void (*atomeyelib_on_click_atom)(int mod_id, int iw, int atom);
+void (*atomeyelib_on_close)(int mod_id, int iw);
+void (*atomeyelib_on_advance)(int mod_id, int iw, char *instr);
+void (*atomeyelib_on_new)(int mod_id, int iw);
+int atomeyelib_mod_id = 0;
+int atomeyelib_icopy = -1;
 #endif
 
 double cui_wtime(void)
@@ -1036,7 +1046,7 @@ static bool proc_next(int iw, char *instr, char **outstr)
 static bool proc_close(int iw, char *instr, char **outstr)
 {
 #ifdef ATOMEYE_LIB
-  (*atomeyelib_on_close)(iw);
+  (*atomeyelib_on_close)(atomeyelib_mod_id, iw);
 #endif
     if (iw == cui_iw)
         proc_next(iw, NULL, outstr);
@@ -2932,7 +2942,7 @@ static bool proc_load_config_advance(int iw, char *instr, char **outstr)
 #ifdef ATOMEYE_LIB
   /* release lock during call back so new events can be queued */
   //  pthread_mutex_unlock(&global_lock);      
-  (*atomeyelib_on_advance)(iw, instr);
+  (*atomeyelib_on_advance)(atomeyelib_mod_id, iw, instr);
   //pthread_mutex_lock(&global_lock);
   return FALSE;
 #endif
@@ -4355,7 +4365,7 @@ bool gui_treatevent(int iw)
                 if (i >= 0) {
 #ifdef ATOMEYE_LIB
 		  //pthread_mutex_unlock(&global_lock);      
-		  (*atomeyelib_on_click_atom)(iw, i);
+		  (*atomeyelib_on_click_atom)(atomeyelib_mod_id, iw, i);
 		  //pthread_mutex_lock(&global_lock);
 #endif
 #ifdef USE_P3D
@@ -5119,19 +5129,6 @@ renderer:
 
 /* API functions to be called from python */
 #ifdef ATOMEYE_LIB
-
-#include "atomeyelib.h"
-#include "libatoms.h"
-
-Atomeyelib_events atomeyelib_events[AX_MAXWIN][ATOMEYELIB_MAX_EVENTS];
-int atomeyelib_n_events[AX_MAXWIN];
-int atomeyelib_q_head[AX_MAXWIN];
-int atomeyelib_q_tail[AX_MAXWIN];
-
-int atomeyelib_icopy = -1;
-
-extern bool guess_to_be_PBC;
-
 int atomeyelib_init(int argc, char *argv[], Atomeyelib_atoms *data)
 {
     register int i;
@@ -5313,10 +5310,10 @@ int atomeyelib_init(int argc, char *argv[], Atomeyelib_atoms *data)
     return(0);
 }
 
-void atomeyelib_set_handlers(void (*on_click)(int iw, int atom), 
-			     void (*on_close)(int iw), 
-			     void (*on_advance)(int iw, char *instr),
-			     void (*on_new)(int iw))  {
+void atomeyelib_set_handlers(void (*on_click)(int mod_id, int iw, int atom), 
+			     void (*on_close)(int mod_id, int iw), 
+			     void (*on_advance)(int mod_id, int iw, char *instr),
+			     void (*on_new)(int mod_id, int iw))  {
 
   //pthread_mutex_lock(&global_lock);
   atomeyelib_on_click_atom = on_click;
@@ -5326,7 +5323,7 @@ void atomeyelib_set_handlers(void (*on_click)(int iw, int atom),
   //pthread_mutex_unlock(&global_lock);
 }
 
-int atomeyelib_open_window(int copy)
+int atomeyelib_open_window(int mod_id, int copy)
 {
   pthread_t tid;
   int iw;
@@ -5335,6 +5332,7 @@ int atomeyelib_open_window(int copy)
     return -1;
   }
 
+  atomeyelib_mod_id = mod_id;
   atomeyelib_icopy = copy;
 
   pthread_create (&tid, NULL, (void *(*)(void *))
