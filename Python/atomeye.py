@@ -69,7 +69,12 @@ class MultipleExtMod(object):
         # first find the "real" module on the "real" syspath
         srcfile, srcpath, srcdesc = imp.find_module(name)
         # now create a temp directory for the bogus package
-        self._pkgname, self._pkgdir = _tmp_pkg('.')
+        self._pkgname, self._pkgdir = _tmp_pkg()
+
+        # add parent directory to sys.path if necessary
+        if os.path.dirname(self._pkgdir) not in sys.path:
+            sys.path.append(os.path.dirname(self._pkgdir))
+        
         # copy the original module to the new package
         shutil.copy(srcpath, self._pkgdir)
         # import the module
@@ -153,10 +158,11 @@ class AtomEyeViewer(object):
                 if not p:
                     cell[i,i] = max(1.0, 2*(pos[:,i].max()-pos[:,i].min()))
 
-            print 'Number of atoms: %d' % n_atom
-            print 'Fortran indexing: %r' % self.fortran_indexing
-            print 'Effective unit cell:'
-            print cell
+            if self.verbose:
+                print 'Number of atoms: %d' % n_atom
+                print 'Fortran indexing: %r' % self.fortran_indexing
+                print 'Effective unit cell:'
+                print cell
 
             try:
                 arrays = self.current_atoms.properties
@@ -338,11 +344,12 @@ class AtomEyeViewer(object):
             self.current_atoms.add_property('_show', _show)
             property = '_show'
 
-        self._atomeye.load_atoms(self._window_id, title, n_atom, cell, arrays)
-        if property is not None:
-            self.aux_property_coloring(property)
-        if arrows is not None:
-            self.draw_arrows(arrows)
+        if self.current_atoms is not None:
+            self._atomeye.load_atoms(self._window_id, title, n_atom, cell, arrays)
+            if property is not None:
+                self.aux_property_coloring(property)
+            if arrows is not None:
+                self.draw_arrows(arrows)
 
     def run_command(self, command):
         if not self.is_alive: 
