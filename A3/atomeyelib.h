@@ -46,6 +46,6 @@ void atomeyelib_set_title(int iw, char *title);
 int atomeyelib_treatevent(int iw);
 int atomeyelib_queueevent(int iw, int event, char *instr, Atomeyelib_atoms *data, char *outstr);
 void atomeyelib_wait(int iw);
-
+void atomeyelib_get_visible(int *n_shown, int **idx);
 
 #endif
