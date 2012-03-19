@@ -445,16 +445,18 @@ static PyObject*
 atomeye_get_visible(PyObject *self, PyObject *args)
 {
   int n_shown, *idx;
-  PyObject *result = NULL;
+  PyObject *list = NULL, *entry = NULL;
   int i;
   
   atomeyelib_get_visible(&n_shown, &idx); //allocates pointer *idx
-  result = PyList_New(n_shown);
+  list = PyList_New(0);
   for (i = 0; i < n_shown; i++) {
-    PyList_SET_ITEM(result, i, PyInt_FromLong(idx[i]));
+    entry = PyInt_FromLong(idx[i]);
+    PyList_Append(list, entry);
+    Py_DECREF(entry);
   }
   free(idx); // free temporary memory
-  return result;
+  return list;
 }
 
 static PyMethodDef atomeye_methods[] = {
