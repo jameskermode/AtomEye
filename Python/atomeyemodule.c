@@ -438,6 +438,24 @@ atomeye_wait(PyObject *self, PyObject *args)
   return Py_None;
 }
 
+static char atomeye_get_visible_doc[] =
+  "_atomeye.get_visible() -- return list of all visible atoms";
+
+static PyObject*
+atomeye_get_visible(PyObject *self, PyObject *args)
+{
+  int n_shown, *idx;
+  PyObject *result = NULL;
+  int i;
+  
+  atomeyelib_get_visible(&n_shown, &idx); //allocates pointer *idx
+  result = PyList_New(n_shown);
+  for (i = 0; i < n_shown; i++) {
+    PyList_SET_ITEM(result, i, PyInt_FromLong(idx[i]));
+  }
+  free(idx); // free temporary memory
+  return result;
+}
 
 static PyMethodDef atomeye_methods[] = {
   {"open_window", atomeye_open_window, METH_VARARGS, atomeye_open_window_doc},
@@ -447,6 +465,7 @@ static PyMethodDef atomeye_methods[] = {
   {"load_atoms", atomeye_load_atoms, METH_VARARGS, atomeye_load_atoms_doc},
   {"set_title", atomeye_set_title, METH_VARARGS, atomeye_set_title_doc},
   {"wait", atomeye_wait, METH_VARARGS, atomeye_wait_doc},
+  {"get_visible", atomeye_get_visible, METH_VARARGS, atomeye_get_visible_doc},
   {NULL, NULL}
 };
 

@@ -557,6 +557,13 @@ class AtomEyeViewer(object):
             raise RuntimeError('is_alive is False')
         self._atomeye.wait(self._window_id)
 
+    def get_visible(self):
+        """Return list of indices of atoms currently visible in this viewer."""
+        indices = self._atomeye.get_visible()
+        if self.fortran_indexing:
+            indices = [idx+1 for idx in indices]
+        return indices
+
 
 def show(obj, property=None, frame=0, viewer=None,
          nowindow=False, newwindow=False, arrows=None, verbose=True):

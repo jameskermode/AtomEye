@@ -5635,4 +5635,15 @@ void atomeyelib_wait(int iw) {
   }
 }
 
+void atomeyelib_get_visible(int *n_shown, int **idx) {
+  int i;
+  
+  *n_shown = B->n_shown;
+  *idx = malloc(sizeof(int)*B->n_shown);
+
+  for (i=0; i<B->n_shown; i++) {
+    (*idx)[i] = B->idx[i];
+  }
+}
+
 #endif
