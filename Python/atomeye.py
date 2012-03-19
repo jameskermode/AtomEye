@@ -560,6 +560,9 @@ class AtomEyeViewer(object):
     def get_visible(self):
         """Return list of indices of atoms currently visible in this viewer."""
         indices = self._atomeye.get_visible()
+        if numpy.any(indices > len(self.current_atoms)):
+            # atoms duplicated due to narrow cell (n->small_cell_err_handler == 1)
+            indices = list(set([idx % len(self.current_atoms) for idx in indices ]))
         if self.fortran_indexing:
             indices = [idx+1 for idx in indices]
         return indices
