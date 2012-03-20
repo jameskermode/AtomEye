@@ -2,9 +2,9 @@ include Makefile.config
 
 ifeq (${HAVE_QUIP},1)
   # Override with settings from QUIP Makefiles
+  include Makefile.${QUIP_ARCH}
   include Makefile.inc
   include Makefile.rules
-  include Makefile.${QUIP_ARCH}
 
   CFLAGS += -fPIC -DHAVE_LIBATOMS
   FC = ${F77}
