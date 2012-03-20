@@ -71,7 +71,9 @@ static void on_advance(int mod_id, int iw, char *instr)
   state = PyGILState_Ensure();
   if (on_advance_pyfunc != NULL) {
     arglist = Py_BuildValue("(i,i,s)", mod_id, iw, instr);
+    fprintf(stderr, "calling on_advance %d %d %s\n", mod_id, iw, instr);
     PyEval_CallObject(on_advance_pyfunc, arglist);
+    fprintf(stderr, "on_advance %d %d %s done\n", mod_id, iw, instr);
     Py_DECREF(arglist);                           
   }
   PyGILState_Release(state);

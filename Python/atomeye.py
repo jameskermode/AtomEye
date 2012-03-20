@@ -31,6 +31,7 @@ import weakref
 import atexit
 from math import ceil, log10
 
+__all__ = ['AtomEyeViewer', 'show']
 
 def _tmp_pkg(dir=None):
     """
@@ -124,9 +125,10 @@ class AtomEyeViewer(object):
             self.is_alive = True
             viewers[self._viewer_id] = self
 
-        self.show(obj=None, **showargs)
+        self.show(**showargs)
 
     def _convert_atoms(self):
+        sys.stderr.write('in convert_atoms.\n')
         self.current_atoms = None
         if self.atoms is None:
             title = '(null)'
@@ -135,7 +137,9 @@ class AtomEyeViewer(object):
             arrays = None
         else:
             if hasattr(self.atoms, '__iter__'):
+                sys.stderr.write('getting frame %d\n' % self.frame)
                 self.current_atoms = self.atoms[self.frame]
+                sys.stderr.write('done getting frame\n')
                 fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
                 title = 'AtomsList[%s] len=%s' % (fmt % self.frame, fmt % len(self.atoms))
             else:
@@ -283,6 +287,7 @@ class AtomEyeViewer(object):
 
         print 'setting frame to %d' % self.frame
         sys.stdout.flush()
+    
         self.show()
 
         if self.verbose:
@@ -329,7 +334,9 @@ class AtomEyeViewer(object):
                         frame=len(self.atoms)-1
                 self.frame = frame
 
+        sys.stderr.write('entering convert_atoms\n')
         title, n_atom, cell, arrays = self._convert_atoms() # also sets self.current_atoms
+        sys.stderr.write('convert_atoms done\n')
                 
         if property is not None and not isinstance(property,str) and hasattr(self.current_atoms, 'properties'):
             if isinstance(property,int):
@@ -345,6 +352,8 @@ class AtomEyeViewer(object):
             property = '_show'
 
         if self.current_atoms is not None:
+            sys.stderr.write('calling load_atoms with current_atoms=%r\n' % self.current_atoms)
+
             self._atomeye.load_atoms(self._window_id, title, n_atom, cell, arrays)
             if property is not None:
                 self.aux_property_coloring(property)
@@ -490,6 +499,18 @@ class AtomEyeViewer(object):
 
     def load_config_advance(self, command):
         self.run_command("load_config_advance %s" % command)
+
+    def first(self):
+        self.run_command("load_config_first")
+
+    def last(self):
+        self.run_command("load_config_last")
+
+    def forward(self):
+        self.run_command("load_config_forward")
+
+    def backward(self):
+        self.run_command("load_config_backward")
 
     def script_animate(self, filename):
         self.run_command("script_animate %s" % filename)

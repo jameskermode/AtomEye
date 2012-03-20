@@ -2941,9 +2941,11 @@ static bool proc_load_config_advance(int iw, char *instr, char **outstr)
 
 #ifdef ATOMEYE_LIB
   /* release lock during call back so new events can be queued */
-  //  pthread_mutex_unlock(&global_lock);      
+  pthread_mutex_unlock(&global_lock);      
+  fprintf(stderr, "calling atomeyelib_on_advance %d %d %s\n", atomeyelib_mod_id, iw, instr);
   (*atomeyelib_on_advance)(atomeyelib_mod_id, iw, instr);
-  //pthread_mutex_lock(&global_lock);
+  fprintf(stderr, "atomeyelib_on_advance %d %d %s complete\n", atomeyelib_mod_id, iw, instr);
+  pthread_mutex_lock(&global_lock);
   return FALSE;
 #endif
     *outstr = "parameter error";
@@ -5370,7 +5372,7 @@ int atomeyelib_queueevent(int iw, int event, char *instr, Atomeyelib_atoms *data
     return 0;
   }
 
-  //  printf("iw=%d queueing event type %d params %s data %x position %d of %d\n", iw, event, instr, data, atomeyelib_q_tail[iw], atomeyelib_n_events[iw]+1);
+  fprintf(stderr, "iw=%d queueing event type %d params %s data %x position %d of %d\n", iw, event, instr, data, atomeyelib_q_tail[iw], atomeyelib_n_events[iw]+1);
 
   pthread_mutex_lock(&global_lock);
 
@@ -5422,14 +5424,14 @@ bool atomeyelib_treatevent(int iw) {
 
   pthread_mutex_unlock(&global_lock);
 
-  //  printf("iw=%d dispatching event type %d position %d of %d\n", iw, atomeyelib_events[iw][qhead].event, 
-  //  	 atomeyelib_q_head[iw], atomeyelib_n_events[iw]);
+  fprintf(stderr, "iw=%d dispatching event type %d position %d of %d\n", iw, atomeyelib_events[iw][qhead].event, 
+	  atomeyelib_q_head[iw], atomeyelib_n_events[iw]);
   switch (atomeyelib_events[iw][qhead].event) {
   case ATOMEYELIB_REDRAW:
     redraw = 1;
     break;
   case ATOMEYELIB_RUN_COMMAND:
-    //    printf("dispatching %s\n", atomeyelib_events[iw][qhead].instr);
+    fprintf(stderr, "dispatching %s\n", atomeyelib_events[iw][qhead].instr);
     redraw = atomeyelib_run_command(iw, atomeyelib_events[iw][qhead].instr, &outstr);
 
     //if (outstr != NULL)
