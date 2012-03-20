@@ -10,10 +10,11 @@
 
 #include "Atoms.h"
 
+#ifdef HAVE_NETCDF
 #include <netcdf.h>
-#include <sys/stat.h>
-
 #define netcdf_check(s) if ((retval = (s))) pe("NetCDF Error: %s %d %s\n", __FILE__, __LINE__, nc_strerror(retval));
+#endif
+#include <sys/stat.h>
 
 #define N_A 6.0221479e23
 #define ELEM_CHARGE 1.60217653e-19
@@ -2969,7 +2970,11 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
   if (xyz)
     query_xyz(nfname, 1, 0, &n_frame, &n_atom,  &error);
   else
+#ifdef HAVE_NETCDF
     query_netcdf(nfname,  &n_frame, &n_atom, &n_label, &n_string, &error);
+#else
+    pe("NetCDF support not compiled in!");
+#endif
   if (error != ERROR_NONE) c_error_abort_(NULL); //pe("error occured querying file %s", nfname);
   
   if (sscanf(framestr, "%d", &frame) == 1) {
@@ -3005,15 +3010,18 @@ void Config_load_libatoms_filename(char *fname, FILE *info, Alib_Declare_Config)
 
   // Read the file into params, properties dictionaries
   if (xyz)
-    read_xyz(nfname, params, properties, NULL, lattice, &n_atom, 1, frame, range, 0, 0, &error);
+    read_xyz(nfname, params, properties, NULL, lattice, &n_atom, 1, frame, range, 0, 0, -1, NULL, &error);
   else {
+#ifdef HAVE_NETCDF
     read_netcdf(nfname, params, properties, NULL, lattice, cell_lengths, cell_angles, 
 		&cell_rotated, &n_atom, frame, 1, range, 0, 0.0, &error);
     lattice_abc_to_xyz_(cell_lengths, cell_angles, lattice);
     if (cell_rotated == 1) {
       Fprintf(info, "WARNING: file has cell_rotated=1 but rotation not yet implemented\n");
-      
     }
+#else
+    pe("NetCDF support not compiled in!");
+#endif
   }
   if (error != ERROR_NONE) c_error_abort_(NULL); //pe("error reading from  file %s", nfname);
 
