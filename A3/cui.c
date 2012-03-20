@@ -2941,11 +2941,11 @@ static bool proc_load_config_advance(int iw, char *instr, char **outstr)
 
 #ifdef ATOMEYE_LIB
   /* release lock during call back so new events can be queued */
-  pthread_mutex_unlock(&global_lock);      
+  //pthread_mutex_unlock(&global_lock);      
   fprintf(stderr, "calling atomeyelib_on_advance %d %d %s\n", atomeyelib_mod_id, iw, instr);
   (*atomeyelib_on_advance)(atomeyelib_mod_id, iw, instr);
   fprintf(stderr, "atomeyelib_on_advance %d %d %s complete\n", atomeyelib_mod_id, iw, instr);
-  pthread_mutex_lock(&global_lock);
+  //pthread_mutex_lock(&global_lock);
   return FALSE;
 #endif
     *outstr = "parameter error";
