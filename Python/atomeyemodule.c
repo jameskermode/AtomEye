@@ -296,6 +296,10 @@ atomeye_open_window(PyObject *self, PyObject *args)
     sprintf(outstr, "Bad copy window id %d", icopy);
     PyErr_SetString(PyExc_RuntimeError, outstr);
     return NULL;
+  } else if (iw == -2) {
+    sprintf(outstr, "Cannot allocate sufficient stack space for AtomEye thread");
+    PyErr_SetString(PyExc_RuntimeError, outstr);
+    return NULL;   
   }
 
   return PyInt_FromLong((long)iw);

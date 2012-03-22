@@ -5329,6 +5329,9 @@ int atomeyelib_open_window(int mod_id, int copy)
 {
   pthread_t tid;
   int iw;
+  pthread_attr_t attr;
+  size_t stacksize;
+  const size_t STACKSIZE = 5*1024*1024; // 5Mb should be enough
 
   if (copy != -1 && !nonvacant(copy)) {
     return -1;
@@ -5337,7 +5340,17 @@ int atomeyelib_open_window(int mod_id, int copy)
   atomeyelib_mod_id = mod_id;
   atomeyelib_icopy = copy;
 
-  pthread_create (&tid, NULL, (void *(*)(void *))
+  pthread_attr_init(&attr);
+  pthread_attr_getstacksize(&attr, &stacksize);
+  fprintf(stderr, "atomeyelib_open_window: default thread stack size is %li bytes\n", stacksize);
+    
+  if (pthread_attr_setstacksize(&attr, STACKSIZE) != 0)
+    return -2;
+
+  pthread_attr_getstacksize(&attr, &stacksize);
+  fprintf(stderr, "atomeyelib_open_window: successfully set thread stack size to %li bytes\n", stacksize);
+
+  pthread_create (&tid, &attr, (void *(*)(void *))
 		  thread_start,
 		  (void *)(&atomeyelib_icopy));
 
@@ -5422,7 +5435,7 @@ bool atomeyelib_treatevent(int iw) {
 
   qhead = atomeyelib_q_head[iw];
 
-  pthread_mutex_unlock(&global_lock);
+  //pthread_mutex_unlock(&global_lock);
 
   fprintf(stderr, "iw=%d dispatching event type %d position %d of %d\n", iw, atomeyelib_events[iw][qhead].event, 
 	  atomeyelib_q_head[iw], atomeyelib_n_events[iw]);
@@ -5449,7 +5462,7 @@ bool atomeyelib_treatevent(int iw) {
     pe("atomeyelib_treatevent: iw=%d bad event type %d\n", iw, atomeyelib_events[iw][qhead].event);
   }
 
-  pthread_mutex_lock(&global_lock);
+  //pthread_mutex_lock(&global_lock);
 
   atomeyelib_n_events[iw]--;
   atomeyelib_q_head[iw]++;
