@@ -32,8 +32,9 @@ static PyObject *on_click_atom_pyfunc = NULL;
 static PyObject *on_advance_pyfunc = NULL;
 static PyObject *on_close_pyfunc = NULL;
 static PyObject *on_new_pyfunc = NULL;
+static PyObject *on_redraw_pyfunc = NULL;
 
-static Atomeyelib_atoms atomeye_atoms;
+static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays, Atomeyelib_atoms *atoms);
 
 static void on_click_atom(int mod_id, int iw, int atom)
 {
@@ -71,9 +72,7 @@ static void on_advance(int mod_id, int iw, char *instr)
   state = PyGILState_Ensure();
   if (on_advance_pyfunc != NULL) {
     arglist = Py_BuildValue("(i,i,s)", mod_id, iw, instr);
-    fprintf(stderr, "calling on_advance %d %d %s\n", mod_id, iw, instr);
     PyEval_CallObject(on_advance_pyfunc, arglist);
-    fprintf(stderr, "on_advance %d %d %s done\n", mod_id, iw, instr);
     Py_DECREF(arglist);                           
   }
   PyGILState_Release(state);
@@ -93,17 +92,58 @@ static void on_new(int mod_id, int iw)
   PyGILState_Release(state);
 }
 
-static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
+static int on_redraw(int mod_id, int iw, Atomeyelib_atoms *atoms)
+{
+  PyObject *arglist, *result;
+  PyGILState_STATE state;
+  int redraw, nat;
+  char *mytitle;
+  PyObject *cell, *arrays;
+
+  redraw = 0;
+  state = PyGILState_Ensure();
+  if (on_redraw_pyfunc != NULL) {
+    arglist = Py_BuildValue("(i,i)", mod_id, iw);
+    result = PyEval_CallObject(on_redraw_pyfunc, arglist);
+    Py_DECREF(arglist);                       
+
+    if (result == NULL) {
+      fprintf(stderr, "WARNING: on_redraw(mod_id=%d, iw=%d) returned NULL\n", mod_id, iw);
+      return 0;
+    }
+
+    if (!PyArg_ParseTuple(result, "isiOO", &redraw, &mytitle, &nat, &cell, &arrays)) {
+      PyErr_PrintEx(0);
+      return 0;
+    }
+    strcpy(atoms->title, mytitle);
+    if (!redraw) {
+      // nothing to be done
+      Py_DECREF(result);
+      PyGILState_Release(state);
+      return 0;
+    }
+
+    if (!update_atoms_structure(nat, cell, arrays, atoms)) {
+      PyErr_PrintEx(0);
+      Py_DECREF(result);
+      PyGILState_Release(state);
+      return 0;
+    }
+    Py_DECREF(result);
+  }
+  PyGILState_Release(state);
+  return redraw;
+}
+
+static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays, Atomeyelib_atoms *atoms)
 {
   int i,j, type, shape[2], error = 0;
   PyObject *fpointer = NULL, *pykey = NULL, *array = NULL, *iterator = NULL;
   char *key;
   void *data;
 
-  if (atomeye_atoms.allocated)
-    dictionary_finalise(atomeye_atoms.properties);
-
-  atomeye_atoms.n_atom = n_atom;
+  atoms->n_atom = n_atom;
 
   /* cell - 3x3 array of lattice vector as rows */
   if (PyArray_NDIM(cell) != 2) {
@@ -120,7 +160,7 @@ static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
   }
   for (i=0; i<3; i++)
     for (j=0; j<3; j++)
-      atomeye_atoms.lattice[i][j] = *(double *)PyArray_GETPTR2(cell, i, j);
+      atoms->lattice[i][j] = *(double *)PyArray_GETPTR2(cell, i, j);
 
   /* Test for arrays._fpointer */
   if (!PyObject_HasAttrString(arrays, "_fpointer")) {
@@ -130,8 +170,8 @@ static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
     }
 
     /* construct new Fortran dictionary, copying keys and values from arrays */
-    dictionary_initialise(atomeye_atoms.properties);
-    atomeye_atoms.allocated = 1;
+    dictionary_initialise(atoms->properties);
+    atoms->allocated = 1;
     
     /* for key in arrays */
     iterator = PyObject_GetIter(arrays);
@@ -164,7 +204,7 @@ static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
 	else
 	  type = T_INTEGER_A;
 	shape[0] = n_atom;
-	dictionary_add_key(atomeye_atoms.properties, key, &type, shape, &data, &error, strlen(key));
+	dictionary_add_key(atoms->properties, key, &type, shape, &data, &error, strlen(key));
 	if (error != 0) {
 	  PyErr_Format(PyExc_ValueError, "Error adding key \"%s\" shape (%d,%d)", key, shape[0], shape[1]);
 	  goto fail;
@@ -188,7 +228,7 @@ static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
 	  type = T_INTEGER_A2;
 	shape[0] = PyArray_DIM(array, 1);
 	shape[1] = n_atom;
-	dictionary_add_key(atomeye_atoms.properties, key, &type, shape, &data, &error, strlen(key));	
+	dictionary_add_key(atoms->properties, key, &type, shape, &data, &error, strlen(key));	
 	if (error != 0) {
 	  PyErr_Format(PyExc_ValueError, "Error adding key \"%s\" shape (%d,%d)", key, shape[0], shape[1]);
 	  goto fail;
@@ -216,7 +256,7 @@ static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
   } else {
     /* arrays has _fpointer attribute, so it's already a Fortran dictionary of arrays  */
     fpointer = PyObject_GetAttrString(arrays, "_fpointer");
-    atomeye_atoms.allocated = 0; // we didn't allocate dictionary, so shouldn't deallocate it
+    atoms->allocated = 0; // we didn't allocate dictionary, so shouldn't deallocate it
     if (PyArray_NDIM(fpointer) != 1) {
       PyErr_SetString(PyExc_ValueError, "arrays._fpointer must have 1 dimension");
       goto fail;
@@ -230,7 +270,7 @@ static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
       goto fail;
     }
     for (i=0; i < SIZEOF_FORTRAN_T; i++)
-      atomeye_atoms.properties[i] = ((int*)PyArray_DATA(fpointer))[i];
+      atoms->properties[i] = ((int*)PyArray_DATA(fpointer))[i];
 
     Py_DECREF(fpointer);
   }
@@ -246,23 +286,23 @@ static int update_atoms_structure(int n_atom, PyObject *cell, PyObject *arrays)
 }
 
 static char atomeye_open_window_doc[]=
-  "iw = _atomeye.open_window(mod_id=0, copy=-1,n_atoms=0,cell=None,arrays=None,nowindow=0) -- open a new AtomEye window";
+  "iw = _atomeye.open_window(mod_id=0, copy=-1, nowindow=0) -- open a new AtomEye window";
 
 static PyObject*
 atomeye_open_window(PyObject *self, PyObject *args)
 {
-  int mod_id = 0, icopy = -1, iw, argc, nat = 0;
+  int mod_id = 0, icopy = -1, iw, argc;
   char outstr[255];
   char *argv[3];
-  PyObject *cell = NULL, *arrays = NULL;
+  Atomeyelib_atoms atoms;
   static int atomeye_initialised = 0;
   int nowindow = 0;
 
-  if (!PyArg_ParseTuple(args, "|iiiOOi", &mod_id, &icopy, &nat, &cell, &arrays, &nowindow))
+  if (!PyArg_ParseTuple(args, "|iii", &mod_id, &icopy, &nowindow))
     return NULL;
 
   if (!atomeye_initialised) {
-    atomeye_atoms.allocated = 0;
+    atoms.allocated = 0;
 
     argv[0] = (char *)malloc(20);
     argv[1] = (char *)malloc(20);
@@ -275,14 +315,15 @@ atomeye_open_window(PyObject *self, PyObject *args)
       argc = 3;
     }
   
-    if (arrays != NULL && arrays != Py_None) {
-      if (!update_atoms_structure(nat,cell,arrays)) return NULL;
-      atomeyelib_init(argc, argv, &atomeye_atoms);
+    if (on_redraw(mod_id, 0, &atoms)) {
+      atomeyelib_init(argc, argv, &atoms);
     } else
       atomeyelib_init(argc, argv, NULL);
 
-    atomeyelib_set_handlers(&on_click_atom, &on_close, &on_advance, &on_new);
+    atomeyelib_set_handlers(&on_click_atom, &on_close, &on_advance, &on_new, &on_redraw);
 
+    if (atoms.allocated)
+      dictionary_finalise(atoms.properties);
     free(argv[0]);
     free(argv[1]);
     free(argv[2]);
@@ -311,7 +352,8 @@ static char atomeye_set_handlers_doc[]=
 static PyObject*
 atomeye_set_handlers(PyObject *self, PyObject *args)
 {
-  if (!PyArg_ParseTuple(args, "OOOO", &on_click_atom_pyfunc, &on_close_pyfunc, &on_advance_pyfunc, &on_new_pyfunc))
+  if (!PyArg_ParseTuple(args, "OOOOO", &on_click_atom_pyfunc, &on_close_pyfunc, 
+			&on_advance_pyfunc, &on_new_pyfunc, &on_redraw_pyfunc))
     return NULL;
 
   if (!PyCallable_Check(on_click_atom_pyfunc)) {
@@ -334,17 +376,23 @@ atomeye_set_handlers(PyObject *self, PyObject *args)
     return NULL;
   }
 
+  if (!PyCallable_Check(on_redraw_pyfunc)) {
+    PyErr_SetString(PyExc_TypeError, "Need a callable object!");
+    return NULL;
+  }
+
   Py_INCREF(on_click_atom_pyfunc);
   Py_INCREF(on_advance_pyfunc);
   Py_INCREF(on_close_pyfunc);
   Py_INCREF(on_new_pyfunc);
+  Py_INCREF(on_redraw_pyfunc);
   
   Py_INCREF(Py_None);
   return Py_None;
 }
 
 static char atomeye_redraw_doc[]=
-  "_atomeye.redraw(iw) -- redraw window";
+  "_atomeye.redraw(iw) -- update atoms and redraw window";
 
 static PyObject*
 atomeye_redraw(PyObject *self, PyObject *args)
@@ -386,31 +434,6 @@ atomeye_run_command(PyObject *self, PyObject *args)
   return Py_None;
 }
 
-static char atomeye_load_atoms_doc[]=
-  "_atomeye.load_atoms(iw, title, n_atoms, cell, arrays) -- load atoms into AtomEye";
-
-static PyObject*
-atomeye_load_atoms(PyObject *self, PyObject *args)
-{
-  int iw, nat;
-  char *title;
-  PyObject *cell, *arrays;
-  char outstr[255];
-  
-  if (!PyArg_ParseTuple(args, "isiOO", &iw, &title, &nat, &cell, &arrays))
-    return NULL;
-  
-  if (!update_atoms_structure(nat, cell, arrays)) return NULL;
-
-  if (!atomeyelib_queueevent(iw, ATOMEYELIB_LOAD_ATOMS, title, &atomeye_atoms, outstr)) {
-    PyErr_SetString(PyExc_RuntimeError, outstr);    
-    return NULL;
-  }
-
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
 static char atomeye_set_title_doc[] =
   "_atomeye.set_title(iw, title) -- set window title";
 
@@ -440,7 +463,9 @@ atomeye_wait(PyObject *self, PyObject *args)
   if (!PyArg_ParseTuple(args, "i", &iw))
     return NULL;
   
+  Py_BEGIN_ALLOW_THREADS
   atomeyelib_wait(iw);
+  Py_END_ALLOW_THREADS
   return Py_None;
 }
 
@@ -470,7 +495,6 @@ static PyMethodDef atomeye_methods[] = {
   {"set_handlers", atomeye_set_handlers, METH_VARARGS, atomeye_set_handlers_doc},
   {"redraw", atomeye_redraw, METH_VARARGS, atomeye_redraw_doc},
   {"run_command", atomeye_run_command, METH_VARARGS, atomeye_run_command_doc},
-  {"load_atoms", atomeye_load_atoms, METH_VARARGS, atomeye_load_atoms_doc},
   {"set_title", atomeye_set_title, METH_VARARGS, atomeye_set_title_doc},
   {"wait", atomeye_wait, METH_VARARGS, atomeye_wait_doc},
   {"get_visible", atomeye_get_visible, METH_VARARGS, atomeye_get_visible_doc},
