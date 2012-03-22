@@ -41,6 +41,7 @@ void (*atomeyelib_on_click_atom)(int mod_id, int iw, int atom);
 void (*atomeyelib_on_close)(int mod_id, int iw);
 void (*atomeyelib_on_advance)(int mod_id, int iw, char *instr);
 void (*atomeyelib_on_new)(int mod_id, int iw);
+int (*atomeyelib_on_redraw)(int mod_id, int iw, Atomeyelib_atoms *atoms);
 int atomeyelib_mod_id = 0;
 int atomeyelib_icopy = -1;
 #endif
@@ -2942,9 +2943,7 @@ static bool proc_load_config_advance(int iw, char *instr, char **outstr)
 #ifdef ATOMEYE_LIB
   /* release lock during call back so new events can be queued */
   //pthread_mutex_unlock(&global_lock);      
-  fprintf(stderr, "calling atomeyelib_on_advance %d %d %s\n", atomeyelib_mod_id, iw, instr);
   (*atomeyelib_on_advance)(atomeyelib_mod_id, iw, instr);
-  fprintf(stderr, "atomeyelib_on_advance %d %d %s complete\n", atomeyelib_mod_id, iw, instr);
   //pthread_mutex_lock(&global_lock);
   return FALSE;
 #endif
@@ -5315,13 +5314,15 @@ int atomeyelib_init(int argc, char *argv[], Atomeyelib_atoms *data)
 void atomeyelib_set_handlers(void (*on_click)(int mod_id, int iw, int atom), 
 			     void (*on_close)(int mod_id, int iw), 
 			     void (*on_advance)(int mod_id, int iw, char *instr),
-			     void (*on_new)(int mod_id, int iw))  {
+			     void (*on_new)(int mod_id, int iw),
+			     int (*on_redraw)(int mod_id, int iw, Atomeyelib_atoms *atoms))  {
 
   //pthread_mutex_lock(&global_lock);
   atomeyelib_on_click_atom = on_click;
   atomeyelib_on_close = on_close;
   atomeyelib_on_advance = on_advance;
   atomeyelib_on_new = on_new;
+  atomeyelib_on_redraw = on_redraw;
   //pthread_mutex_unlock(&global_lock);
 }
 
@@ -5385,7 +5386,7 @@ int atomeyelib_queueevent(int iw, int event, char *instr, Atomeyelib_atoms *data
     return 0;
   }
 
-  fprintf(stderr, "iw=%d queueing event type %d params %s data %x position %d of %d\n", iw, event, instr, data, atomeyelib_q_tail[iw], atomeyelib_n_events[iw]+1);
+  //  fprintf(stderr, "iw=%d queueing event type %d params %s data %x position %d of %d\n", iw, event, instr, data, atomeyelib_q_tail[iw], atomeyelib_n_events[iw]+1);
 
   pthread_mutex_lock(&global_lock);
 
@@ -5426,6 +5427,8 @@ int atomeyelib_queueevent(int iw, int event, char *instr, Atomeyelib_atoms *data
 
 bool atomeyelib_treatevent(int iw) {
   char *outstr = NULL;
+  char title[AX_MAXSTRSIZE];
+  Atomeyelib_atoms atoms;
   int redraw = 0;
   int qhead;
 
@@ -5435,34 +5438,29 @@ bool atomeyelib_treatevent(int iw) {
 
   qhead = atomeyelib_q_head[iw];
 
-  //pthread_mutex_unlock(&global_lock);
+  pthread_mutex_unlock(&global_lock);
 
-  fprintf(stderr, "iw=%d dispatching event type %d position %d of %d\n", iw, atomeyelib_events[iw][qhead].event, 
-	  atomeyelib_q_head[iw], atomeyelib_n_events[iw]);
+  //fprintf(stderr, "iw=%d dispatching event type %d position %d of %d\n", iw, atomeyelib_events[iw][qhead].event, 
+  //atomeyelib_q_head[iw], atomeyelib_n_events[iw]);
   switch (atomeyelib_events[iw][qhead].event) {
   case ATOMEYELIB_REDRAW:
-    redraw = 1;
+    redraw = (*atomeyelib_on_redraw)(atomeyelib_mod_id, iw, &atoms);
+    if (redraw) {
+      atomeyelib_load_libatoms(iw, &atoms, &outstr);
+      if (atoms.allocated)
+	dictionary_finalise(atoms.properties);
+    }
     break;
+
   case ATOMEYELIB_RUN_COMMAND:
-    fprintf(stderr, "dispatching %s\n", atomeyelib_events[iw][qhead].instr);
     redraw = atomeyelib_run_command(iw, atomeyelib_events[iw][qhead].instr, &outstr);
-
-    //if (outstr != NULL)
-    //fprintf(stderr, outstr);
-
     break;
-  case ATOMEYELIB_LOAD_ATOMS:
-    atomeyelib_load_libatoms(iw, atomeyelib_events[iw][qhead].data, 
-			     atomeyelib_events[iw][qhead].instr, &outstr);
-    //if (outstr != NULL)
-    // fprintf(stderr, outstr);
-    redraw = 1;
-    break;
+
   default:
     pe("atomeyelib_treatevent: iw=%d bad event type %d\n", iw, atomeyelib_events[iw][qhead].event);
   }
 
-  //pthread_mutex_lock(&global_lock);
+  pthread_mutex_lock(&global_lock);
 
   atomeyelib_n_events[iw]--;
   atomeyelib_q_head[iw]++;
@@ -5519,7 +5517,7 @@ int atomeyelib_run_command(int iw, char *line, char **outstr) {
 }
 
 /* Copy data from Atoms C structure in memory */
-int atomeyelib_load_libatoms(int iw, Atomeyelib_atoms *atoms, char *title, char **outstr) 
+int atomeyelib_load_libatoms(int iw, Atomeyelib_atoms *atoms, char **outstr) 
 {
     int i, j, k, old_np;
     V3 hook_s, tmp, dx;
@@ -5623,7 +5621,7 @@ int atomeyelib_load_libatoms(int iw, Atomeyelib_atoms *atoms, char *title, char 
         /*scratch_color (iw);*/
         proc_scratch_coloring(iw, "", outstr);
     else {
-      strncpy (AX_title[iw],title,AX_MAXSTRSIZE);
+      strncpy (AX_title[iw],atoms->title,AX_MAXSTRSIZE);
       AX_title[iw][AX_MAXSTRSIZE-1] = '\0';
       AXSetName (iw);
       if (!temporary_disable_bond) {
