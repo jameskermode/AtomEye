@@ -176,7 +176,7 @@ class AtomEyeViewer(object):
 
         self.is_alive = False
         self._module_id = AtomEyeViewer.n_ext_modules
-        self._window_id = len([ win_id for (mod_id, win_id) in viewers if mod_id == self._module_id ])
+        self._window_id = len([ viewer for viewer in viewers if viewer != 'default' and viewer[0] == self._module_id ])
         self._viewer_id = (self._module_id, self._window_id)
         print 'Initialising AtomEyeViewer with module_id %d and window id %s' % self._viewer_id
         viewers[self._viewer_id] = self
@@ -266,7 +266,7 @@ class AtomEyeViewer(object):
             if hasattr(self.atoms, '__iter__'):
                 self.current_atoms = self.atoms[self.frame]
                 fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
-                title = '%s frame %s of %s' % (name, fmt % self.frame, fmt % len(self.atoms))
+                title = '%s frame %s length %s' % (name, fmt % self.frame, fmt % len(self.atoms))
             else:
                 self.current_atoms = self.atoms
                 title = name
