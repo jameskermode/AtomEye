@@ -27,7 +27,6 @@ import os.path
 import shutil
 import sys
 import tempfile
-import weakref
 import atexit
 from math import ceil, log10
 
@@ -93,6 +92,9 @@ default_settings = {'n->xtal_mode': 1,
                     'key->BackSpace': 'load_config_backward'
                     }
 
+default_commands = ['xtal_origin_goto 0.5 0.5 0.5',
+                    'toggle_parallel_projection']
+
 name_map = {'positions': 'pos',
             'masses'   : 'mass',
             'numbers'  : 'Z' }
@@ -106,7 +108,9 @@ class AtomEyeViewer(object):
     n_ext_modules = 0
     
     def __init__(self, atoms=None, viewer_id=None, copy=None, frame=0, delta=1,
-                 nowindow=False, echo=False, block=False, verbose=True, **showargs):
+                 nowindow=False, echo=False, block=False, verbose=True,
+                 enter_hook=None, exit_hook=None, click_hook=None, redraw_hook=None,
+                 **showargs):
         self.atoms = atoms
         self.current_atoms = None
         self.previous_atoms = None
@@ -117,7 +121,10 @@ class AtomEyeViewer(object):
         self.fortran_indexing = False
         self.verbose = verbose
         self.is_alive = False
-        self.selection = []
+        self.enter_hook = enter_hook
+        self.exit_hook = exit_hook
+        self.click_hook = click_hook
+        self.redraw_hook = redraw_hook
 
         if viewer_id is None:
             self.start(copy, nowindow)
@@ -188,6 +195,9 @@ class AtomEyeViewer(object):
             time.sleep(0.1)
         time.sleep(0.3)
         self.update(default_settings)
+        for command in default_commands:
+            self.run_command(command)
+        self.wait()
 
     @staticmethod
     def on_click(mod, iw, idx):
@@ -201,15 +211,8 @@ class AtomEyeViewer(object):
         if self.fortran_indexing:
             idx = idx + 1 # atomeye uses zero based indices
 
-        self.selection.append(idx)
-
-        if self.verbose:
-            print
-            try:
-                self.current_atoms.print_atom(idx)
-            except AttributeError:
-                print self.current_atoms[idx]
-            sys.stdout.flush()
+        if self.click_hook is not None:
+            self.click_hook(self.current_atoms, idx)
 
     @staticmethod
     def on_advance(mod, iw, mode):
@@ -247,10 +250,10 @@ class AtomEyeViewer(object):
             raise RuntimeError('Unexpected window id %d' % iw)
         self = viewers[(mod,iw)]
 
-        print 'Redrawing AtomEyeViewer module %d window %d' % (mod, iw)
-       
         # keep a reference to old atoms around so memory doesn't get free'd prematurely
         self.previous_atoms = self.current_atoms
+        if self.previous_atoms is not None and self.exit_hook is not None:
+            self.exit_hook(self.previous_atoms)
         self.current_atoms = None
         
         if self.atoms is None:
@@ -270,6 +273,9 @@ class AtomEyeViewer(object):
             else:
                 self.current_atoms = self.atoms
                 title = name
+
+            if self.enter_hook is not None:
+                self.enter_hook(self.current_atoms)
 
             n_atom = len(self.current_atoms)
             self.fortran_indexing = False
@@ -303,9 +309,8 @@ class AtomEyeViewer(object):
             print 'Fortran indexing: %r' % self.fortran_indexing
             print 'Unit cell:'
             print cell
-            if hasattr(self.current_atoms, 'params'):
-                for (key, value) in self.current_atoms.params.iteritems():
-                    print '%-20s = %r' % (key, value)
+            if self.redraw_hook is not None:
+                self.redraw_hook(self.current_atoms)
             print '\n'
             sys.stdout.flush()
         
@@ -600,17 +605,12 @@ def show(obj, property=None, frame=0, viewer=None,
     The viewer to be used is the first item on the following list which is defined:
 
       1. `viewer` argument - should be an AtomEyeViewer instance
-      3. `obj.viewer` attribute - should be a weak reference to an AtomEyeViewer instance
       4. The default viewer - `atomeye.viewers["default"]`
 
     If no viewers exist, or if newwindow=True, a new viewer is created.
     In all cases, the instance of AtomEyeViewer used is returned."""
 
     if not newwindow:
-        # if obj has been viewed before, viewer will have been saved with weak reference
-        if viewer is None and hasattr(obj, 'viewer') and type(obj.viewer) is weakref.ref:
-            viewer = obj.viewer() 
-
         if viewer is None and 'default' in viewers:
             # Use default (i.e. first created) viewer
             viewer = viewers['default']
@@ -628,8 +628,6 @@ def show(obj, property=None, frame=0, viewer=None,
                     property=property,
                     frame=frame,
                     arrows=arrows)
-
-    obj.viewer = weakref.ref(viewer) # save a reference to viewer for next time
     return viewer
 
 
