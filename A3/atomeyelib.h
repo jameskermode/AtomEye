@@ -44,7 +44,6 @@ void atomeyelib_set_handlers(void (*on_click)(int mod_id, int iw, int atom),
 			     void (*on_new)(int mod_id, int iw),
 			     int (*on_redraw)(int mod_id, int iw, Atomeyelib_atoms *atoms));
 int atomeyelib_open_window(int mod_id, int icopy);
-void atomeyelib_set_title(int iw, char *title);
 int atomeyelib_treatevent(int iw);
 int atomeyelib_queueevent(int iw, int event, char *instr, Atomeyelib_atoms *data, char *outstr);
 void atomeyelib_wait(int iw);

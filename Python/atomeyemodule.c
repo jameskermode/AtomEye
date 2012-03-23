@@ -434,24 +434,6 @@ atomeye_run_command(PyObject *self, PyObject *args)
   return Py_None;
 }
 
-static char atomeye_set_title_doc[] =
-  "_atomeye.set_title(iw, title) -- set window title";
-
-static PyObject*
-atomeye_set_title(PyObject *self, PyObject *args)
-{
-  int iw;
-  char *title;
-
-  if (!PyArg_ParseTuple(args, "is", &iw, &title))
-    return NULL;
-
-  atomeyelib_set_title(iw, title);
-  
-  Py_INCREF(Py_None);
-  return Py_None;
-}
-
 static char atomeye_wait_doc[] =
   "_atomeye.wait(iw) -- wait for window `iw` to complete all queued events";
 
@@ -495,7 +477,6 @@ static PyMethodDef atomeye_methods[] = {
   {"set_handlers", atomeye_set_handlers, METH_VARARGS, atomeye_set_handlers_doc},
   {"redraw", atomeye_redraw, METH_VARARGS, atomeye_redraw_doc},
   {"run_command", atomeye_run_command, METH_VARARGS, atomeye_run_command_doc},
-  {"set_title", atomeye_set_title, METH_VARARGS, atomeye_set_title_doc},
   {"wait", atomeye_wait, METH_VARARGS, atomeye_wait_doc},
   {"get_visible", atomeye_get_visible, METH_VARARGS, atomeye_get_visible_doc},
   {NULL, NULL}

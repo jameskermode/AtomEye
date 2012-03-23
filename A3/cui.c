@@ -5636,12 +5636,6 @@ error:
     return FALSE;  
 }
 
-void atomeyelib_set_title(int iw, char *title) {
-  strncpy (AX_title[iw],title,AX_MAXSTRSIZE);
-  AX_title[iw][AX_MAXSTRSIZE-1] = '\0';
-  AXSetName (iw);
-}
-
 void atomeyelib_wait(int iw) {
   while (atomeyelib_n_events[iw] != 0) {
     usleep(100);
