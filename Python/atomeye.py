@@ -112,7 +112,7 @@ class AtomEyeViewer(object):
     CONFIG_MAX_AUXILIARY = 64
     
     def __init__(self, atoms=None, viewer_id=None, copy=None, frame=0, delta=1,
-                 nowindow=False, echo=False, block=False, verbose=True,
+                 nowindow=False, echo=False, block=False, verbose=True, fortran_indexing=False,
                  **showargs):
         """
         Construct a new AtomEye viewer window. Each viewer class communicates with one
@@ -138,7 +138,7 @@ class AtomEyeViewer(object):
         self.delta = delta
         self.echo = echo
         self.block = block
-        self.fortran_indexing = False
+        self.fortran_indexing = fortran_indexing
         self.verbose = verbose
         self.is_alive = False
 
@@ -204,6 +204,9 @@ class AtomEyeViewer(object):
     def _exit_hook(self, at):
         pass
 
+    def _close_hook(self):
+        pass
+
     def _redraw_hook(self, at):
         pass
 
@@ -247,6 +250,7 @@ class AtomEyeViewer(object):
             del viewers['default']
             if len(viewers) > 0:
                 viewers['default'] = viewers.values()[0]
+        self._close_hook()
 
     @staticmethod
     def on_new_window(mod, iw):
@@ -285,11 +289,10 @@ class AtomEyeViewer(object):
 
             self._enter_hook(self._current_atoms)
             n_atom = len(self._current_atoms)
-            self.fortran_indexing = False
             try:
                 self.fortran_indexing = self._current_atoms.fortran_indexing
             except AttributeError:
-                pass
+                self.fortran_indexing = False
 
             cell = self._current_atoms.get_cell()
             pbc = self._current_atoms.get_pbc()
