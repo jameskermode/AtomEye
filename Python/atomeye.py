@@ -177,13 +177,12 @@ class AtomEyeViewer(object):
 
         self.is_alive = False
         self._module_id = AtomEyeViewer.n_ext_modules
-        self._window_id = len([ viewer for viewer in viewers if viewer != 'default' and viewer[0] == self._module_id ])
+        self._window_id = len([ viewer for viewer in viewers if viewer[0] == self._module_id ])
         self._viewer_id = (self._module_id, self._window_id)
         print 'Initialising AtomEyeViewer with module_id %d and window id %s' % self._viewer_id
         viewers[self._viewer_id] = self
-        if AtomEyeViewer.n_ext_modules == 0:
-            viewers['default'] = viewers[self._viewer_id]
-        assert self._atomeye.open_window(self._module_id, icopy, nowindow) == self._window_id
+        atomeye_window_id = self._atomeye.open_window(self._module_id, icopy, nowindow)
+        assert atomeye_window_id == self._window_id
         AtomEyeViewer.n_ext_modules += 1
         while not self.is_alive:
             time.sleep(0.1)
@@ -245,11 +244,6 @@ class AtomEyeViewer(object):
         self = viewers[(mod,iw)]
         self.is_alive = False
         del viewers[self._viewer_id]
-        if viewers['default'] is self:
-            # check if we were the default viewer
-            del viewers['default']
-            if len(viewers) > 0:
-                viewers['default'] = viewers.values()[0]
         self._close_hook()
 
     @staticmethod
@@ -412,7 +406,7 @@ class AtomEyeViewer(object):
         """
         self.run_command('close')
 
-    def set(self, key, value):
+    def setp(self, key, value):
         """
         Run the AtomEye command "set key value".
         """
@@ -423,7 +417,7 @@ class AtomEyeViewer(object):
         Update settings from the dictionary D.
         """
         for k, v in D.iteritems():
-            self.set(k, v)
+            self.setp(k, v)
 
     def save(self, filename):
         """
