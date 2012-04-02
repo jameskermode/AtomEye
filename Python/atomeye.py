@@ -64,7 +64,10 @@ class MultipleExtMod(object):
     http://cens.ioc.ee/pipermail/f2py-users/2004-September/000921.html
     """
 
+    count = {}
+
     def __init__(self, name):
+        self.count = MultipleExtMod.count[name] = MultipleExtMod.count.setdefault(name, 0) + 1
         self.name = name
         # first find the "real" module on the "real" syspath
         srcfile, srcpath, srcdesc = imp.find_module(name)
@@ -108,7 +111,6 @@ class AtomEyeViewer(object):
     View an atomic configuration or trajectory with AtomEye.
     """
 
-    n_ext_modules = 0
     CONFIG_MAX_AUXILIARY = 64
     
     def __init__(self, atoms=None, viewer_id=None, copy=None, frame=0, delta=1,
@@ -176,14 +178,13 @@ class AtomEyeViewer(object):
                                    AtomEyeViewer.on_redraw)
 
         self.is_alive = False
-        self._module_id = AtomEyeViewer.n_ext_modules
+        self._module_id = self._atomeye.count
         self._window_id = len([ viewer for viewer in viewers if viewer[0] == self._module_id ])
         self._viewer_id = (self._module_id, self._window_id)
         print 'Initialising AtomEyeViewer with module_id %d and window id %s' % self._viewer_id
         viewers[self._viewer_id] = self
         atomeye_window_id = self._atomeye.open_window(self._module_id, icopy, nowindow)
-        assert atomeye_window_id == self._window_id
-        AtomEyeViewer.n_ext_modules += 1
+        #assert atomeye_window_id == self._window_id
         while not self.is_alive:
             time.sleep(0.1)
         time.sleep(0.3)
@@ -274,6 +275,8 @@ class AtomEyeViewer(object):
             name = 'Atoms'
             if hasattr(self.atoms, 'filename'):
                 name = self.atoms.filename
+            if hasattr(self.atoms, 'name'):
+                name = self.atoms.name
             self._current_atoms = self.gca(update=True)
             if hasattr(self.atoms, '__iter__'):
                 fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
