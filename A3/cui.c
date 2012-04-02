@@ -5611,7 +5611,10 @@ int atomeyelib_load_libatoms(int iw, Atomeyelib_atoms *atoms, char **outstr)
 			  n[iw].arrow_head_height, n[iw].arrow_head_width, 
 			  n[iw].arrow_up, n[iw].arrow_overlay, n[iw].arrow_color);
 
-    //    strcpy(fbasename,title);
+    strcpy(fbasename,atoms->title);
+    strncpy (AX_title[iw],atoms->title,AX_MAXSTRSIZE);
+    AX_title[iw][AX_MAXSTRSIZE-1] = '\0';
+    AXSetName (iw);
 
     if ((n[iw].xtal_mode) && (n[iw].color_mode == COLOR_MODE_COORD))
         assign_coordination_color(iw);
@@ -5621,9 +5624,6 @@ int atomeyelib_load_libatoms(int iw, Atomeyelib_atoms *atoms, char **outstr)
         /*scratch_color (iw);*/
         proc_scratch_coloring(iw, "", outstr);
     else {
-      strncpy (AX_title[iw],atoms->title,AX_MAXSTRSIZE);
-      AX_title[iw][AX_MAXSTRSIZE-1] = '\0';
-      AXSetName (iw);
       if (!temporary_disable_bond) {
 	bond_xtal_origin_update (iw);
 	bond_atom_color_update (iw);
