@@ -88,17 +88,18 @@ class MultipleExtMod(object):
         # now add the module's stuff to this class instance
         self.__dict__.update(self._module.__dict__)
 
-default_settings = {'n->xtal_mode': 1,
-                    'n->suppress_printout': 1,
-                    'n->bond_mode': 1,
-                    'n->atom_r_ratio': 0.5,
-                    'key->BackSpace': 'load_config_backward'
-                    }
 
-default_commands = ['xtal_origin_goto 0.5 0.5 0.5',
-                    'toggle_parallel_projection']
-
-default_rcut_patches = [('Si', 'Si', 0.5)]
+default_state = {
+    'variables' : {'n->xtal_mode': 1,
+                   'n->suppress_printout': 1,
+                   'n->bond_mode': 1,
+                   'n->atom_r_ratio': 0.5,
+                   'key->BackSpace': 'load_config_backward'
+                   },
+    'commands': ['xtal_origin_goto 0.5 0.5 0.5',
+                 'toggle_parallel_projection'],
+    'rcut_patches': [('Si', 'Si', 0.5)]
+}
 
 name_map = {'positions': 'pos',
             'masses'   : 'mass',
@@ -188,11 +189,7 @@ class AtomEyeViewer(object):
         while not self.is_alive:
             time.sleep(0.1)
         time.sleep(0.3)
-        self.update(default_settings)
-        for command in default_commands:
-            self.run_command(command)
-        for (sym1, sym2, rcut) in default_rcut_patches:
-            self.rcut_patch(sym1, sym2, float(rcut))
+        self.set_state(default_state)
         self.wait()
 
     def _click_hook(self, at, idx):
@@ -271,6 +268,7 @@ class AtomEyeViewer(object):
             n_atom = 0
             cell = None
             arrays = None
+            redraw = 0
         else:
             name = 'Atoms'
             if hasattr(self.atoms, 'filename'):
@@ -306,7 +304,7 @@ class AtomEyeViewer(object):
                 for key,value in self._current_atoms.arrays.iteritems():
                     arrays[name_map.get(key,key)] = value
 
-        redraw = 1 # FIXME, we should decide if we really have to redraw here
+            redraw = 1 # FIXME, we should decide if we really have to redraw here
 
         if redraw and self.verbose:
             print '-'*len(title)
@@ -415,18 +413,70 @@ class AtomEyeViewer(object):
         """
         self.run_command("set %s %s" % (str(key), str(value)))
 
-    def update(self, D):
-        """
-        Update settings from the dictionary D.
-        """
-        for k, v in D.iteritems():
-            self.setp(k, v)
-
     def save(self, filename):
         """
         Save AtomEye viewer settings to a file.
         """
         self.run_command("save %s" % str(filename))
+
+    def update(self, state):
+        """
+        Update settings from the dictionary D.
+        """
+        for k, v in state.iteritems():
+            self.setp(k, v)
+
+    def set_state(self, state):
+        for key, value in state.iteritems():
+            if key == 'variables':
+                self.update(value)
+            elif key == 'commands':
+                for command in value:
+                    self.run_command(command)
+            elif key == 'rcut_patches':
+                for (sym1, sym2, rcut) in value:
+                    self.rcut_patch(sym1, sym2, float(rcut))
+            else:
+                setattr(self, key, value)
+        self.redraw()
+                
+    def get_state(self):
+        fd, name = tempfile.mkstemp()
+        os.close(fd)
+        self.save(name)
+        self.wait()
+        time.sleep(0.2)
+        fh = open(name, 'r')
+        lines = fh.readlines()
+        variables = {}
+        commands = []
+        for line in lines:
+            line = line.strip()
+            if line.startswith('set'):
+                dummy, key, value = line.split(None,2)
+                variables[key] = value
+            else:
+                commands.append(line)
+        fh.close()
+        os.unlink(name)
+        state = {}
+        state['variables'] = variables
+        state['commands'] = commands
+
+        odict = self.__dict__.copy()
+        for key in odict.keys():
+            if key.startswith('_'):
+                del odict[key]
+        del odict['atoms']
+        state.update(odict)
+
+        return state
+
+    def __getstate__(self):
+        return self.get_state()
+
+    def __setstate__(self, state):
+        self.set_state(state)
 
     def load_script(self, filename):
         """
