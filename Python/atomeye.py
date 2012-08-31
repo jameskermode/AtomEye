@@ -320,7 +320,7 @@ class AtomEyeViewer(object):
         
         return (redraw, title, n_atom, cell, arrays)
 
-    def gca(self, update=False):
+    def gcat(self, update=False):
         """Get current atoms - return Atoms object currently being visualised.
 
         If update=False (the default), we return what is currently being visualised,
@@ -334,7 +334,7 @@ class AtomEyeViewer(object):
             else:
                 return self.atoms
 
-    def sca(self, atoms, frame=None):
+    def scat(self, atoms, frame=None):
         """Set current atoms (and optionally also current frame)"""
         if atoms is not None:
             self.atoms = atoms
