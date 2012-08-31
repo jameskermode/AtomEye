@@ -215,7 +215,7 @@ class AtomEyeViewer(object):
         if (mod,iw) not in viewers:
             raise RuntimeError('Unexpected module id %d or window id %d' % (mod, iw))
         self = viewers[(mod,iw)]
-        at = self.gca()
+        at = self.gcat()
         
         if at is None:
             return
@@ -275,7 +275,7 @@ class AtomEyeViewer(object):
                 name = self.atoms.filename
             if hasattr(self.atoms, 'name'):
                 name = self.atoms.name
-            self._current_atoms = self.gca(update=True)
+            self._current_atoms = self.gcat(update=True)
             if hasattr(self.atoms, '__iter__'):
                 fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
                 title = '%s frame %s length %s' % (name, fmt % self.frame, fmt % len(self.atoms))
@@ -355,7 +355,7 @@ class AtomEyeViewer(object):
         
         if not self.is_alive:
             raise RuntimeError('is_alive is False')
-        self.sca(atoms, frame)
+        self.scat(atoms, frame)
         if property is not None:
             self.aux_property_coloring(property)
         if arrows is not None:
@@ -578,7 +578,7 @@ class AtomEyeViewer(object):
         """
         Colour the atoms by the auxiliary property with name or index `auxprop`.
         """
-        auxprop = self._property_hook(self.gca(), auxprop)
+        auxprop = self._property_hook(self.gcat(), auxprop)
         self.run_command("aux_property_coloring %s" % str(auxprop))
 
     def central_symmetry_coloring(self):
@@ -757,7 +757,7 @@ class AtomEyeViewer(object):
         if property is None:
             self.run_command('draw_arrows off')
         else:
-            property = self._property_hook(self.gca(), property)
+            property = self._property_hook(self.gcat(), property)
             self.run_command('draw_arrows %s %f %f %f %f %f %f' %
                              (str(property), scale_factor, head_height, head_width, up[0], up[1], up[2]))
 
@@ -770,7 +770,7 @@ class AtomEyeViewer(object):
     def get_visible(self):
         """Return list of indices of atoms currently visible in this viewer."""
         indices = self._atomeye.get_visible()
-        at = self.gca()
+        at = self.gcat()
         if numpy.any(indices > len(at)):
             # atoms duplicated due to narrow cell (n->small_cell_err_handler == 1)
             indices = list(set([idx % len(at) for idx in indices ]))
