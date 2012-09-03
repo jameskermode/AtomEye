@@ -579,6 +579,7 @@ class AtomEyeViewer(object):
         Colour the atoms by the auxiliary property with name or index `auxprop`.
         """
         auxprop = self._property_hook(self.gcat(), auxprop)
+        self.redraw() # ensure auxprop is available
         self.run_command("aux_property_coloring %s" % str(auxprop))
 
     def central_symmetry_coloring(self):
@@ -758,6 +759,7 @@ class AtomEyeViewer(object):
             self.run_command('draw_arrows off')
         else:
             property = self._property_hook(self.gcat(), property)
+            self.redraw() # ensure property is available
             self.run_command('draw_arrows %s %f %f %f %f %f %f' %
                              (str(property), scale_factor, head_height, head_width, up[0], up[1], up[2]))
 
