@@ -271,10 +271,10 @@ class AtomEyeViewer(object):
             redraw = 0
         else:
             name = 'Atoms'
-            if hasattr(self.atoms, 'filename'):
-                name = self.atoms.filename
-            if hasattr(self.atoms, 'name'):
-                name = self.atoms.name
+            if hasattr(self._current_atoms, 'filename') and self._current_atoms.filename is not None:
+                name = self._current_atoms.filename
+            if hasattr(self._current_atoms, 'name') and self._current_atoms.name is not None:
+                name = self._current_atoms.name
             self._current_atoms = self.gcat(update=True)
             if hasattr(self.atoms, '__iter__'):
                 fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
