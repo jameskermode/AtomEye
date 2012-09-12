@@ -2281,19 +2281,25 @@ finish:
     }
     else if (rcut_patching) {
         double rcut, c = 0.0;
+	int absolute = 0;
         if (strcmp(instr, CUI_ARG_REQUIRED) == 0)
             instr = cui_stripspace(
                             gui_readline_gets(iw, "\nChange cutoff", "0.0"));
         buf[0] = 0;
         if (sscanf(instr, " %lf %[^ ]", &c, buf) == 2) {
             if (strcmp(buf, "delta") == 0)
-                c *= n[iw].delta;
+	      c *= n[iw].delta;
+	    else if (strcmp(buf, "absolute") == 0)
+	      absolute = 1;
             else {
                 *outstr = cui_show_syntax;
                 return FALSE;
             }
         }
-        rcut = rcut_patch[rcut_patch_item].rcut + c;
+	if (absolute)
+	  rcut = c;
+	else
+	  rcut = rcut_patch[rcut_patch_item].rcut + c;
         if (rcut < 0)
             rcut = 0;
         else if (c > 0) {

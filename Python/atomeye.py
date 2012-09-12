@@ -98,7 +98,7 @@ default_state = {
                    },
     'commands': ['xtal_origin_goto 0.5 0.5 0.5',
                  'toggle_parallel_projection'],
-    'rcut_patches': [('Si', 'Si', 0.5)]
+    'rcut_patches': []  #[('Si', 'Si', 2.35)]
 }
 
 name_map = {'positions': 'pos',
@@ -434,10 +434,11 @@ class AtomEyeViewer(object):
                 for command in value:
                     self.run_command(command)
             elif key == 'rcut_patches':
-                for (sym1, sym2, rcut) in value:
-                    self.rcut_patch(sym1, sym2, float(rcut))
+                for (sym1, sym2, cutoff) in value:
+                    self.rcut_patch(sym1, sym2, float(rcut), absolute=True)
             else:
                 setattr(self, key, value)
+            self.wait()
         self.redraw()
                 
     def get_state(self):
@@ -613,7 +614,7 @@ class AtomEyeViewer(object):
         """
         self.run_command("toggle_aux_property_thresholds_rigid")
 
-    def rcut_patch(self, sym1, sym2, delta):
+    def rcut_patch(self, sym1, sym2, value, absolute=False):
         """
         Change the cutoff distance for `sym1`--`sym2` bonds by `delta.
 
@@ -621,7 +622,10 @@ class AtomEyeViewer(object):
              viewer.rcut_patch('Si', 'Si', 0.5)
         """
         self.run_command("rcut_patch start %s %s" % (sym1,sym2))
-        self.run_command("rcut_patch %s" % str(delta))
+        cmd = "rcut_patch %s" % value
+        if absolute:
+            cmd += " absolute"
+        self.run_command(cmd)
         self.run_command("rcut_patch finish")
 
     def select_gear(self, gear):
