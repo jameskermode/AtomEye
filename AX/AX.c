@@ -684,7 +684,7 @@ int AX_save_pixmap_as_png (int iw, int compression_level,
         pe ("AX_save_pixmap_as_png: png_create_info_struct failed.\n");
     }
 
-    if (setjmp(png_ptr->jmpbuf))
+    if (setjmp(png_jmpbuf(png_ptr)))
     {
         fclose(fp);
         png_destroy_write_struct(&png_ptr, (png_infopp)NULL);

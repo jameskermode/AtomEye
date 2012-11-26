@@ -50,6 +50,7 @@
 #include <X11/xpm.h>
 #endif
 #include <png.h>
+#include <zlib.h>
 #include <jpeglib.h>
 /* Ju Li's C performance libraries */
 #include <Scalar.h>
