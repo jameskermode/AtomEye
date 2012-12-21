@@ -108,12 +108,16 @@ static int on_redraw(int mod_id, int iw, Atomeyelib_atoms *atoms)
     Py_DECREF(arglist);                       
 
     if (result == NULL) {
-      fprintf(stderr, "WARNING: on_redraw(mod_id=%d, iw=%d) returned NULL\n", mod_id, iw);
+      fprintf(stderr, "Exception occurred in on_redraw(mod_id=%d, iw=%d):\n", mod_id, iw);
+      if (PyErr_Occurred()) PyErr_Print();
+      PyGILState_Release(state);
       return 0;
     }
 
     if (!PyArg_ParseTuple(result, "isiOO", &redraw, &mytitle, &nat, &cell, &arrays)) {
       PyErr_PrintEx(0);
+      Py_DECREF(result);
+      PyGILState_Release(state);
       return 0;
     }
     strcpy(atoms->title, mytitle);
