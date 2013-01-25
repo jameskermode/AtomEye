@@ -16,7 +16,74 @@
 # HQ X
 # HQ XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-"""This module provides a high-level interface to the AtomEye extension module :mod:`_atomeye`. """
+"""
+
+This module provides the :class:`AtomEyeViewer` class, which is a high-level
+interface for interactive visualisation of Atoms objects using a `modified version
+<http://www.jrkermode.co.uk/AtomEye>`_ of the `AtomEye <http://mt.seas.upenn.edu/Archive/Graphics/A/>`_
+atomistic configuration viewer.
+
+:class:`~quippy.atoms.Atoms` and :class:`~quippy.io.AtomsList`
+objects can also be visualised with the :mod:`qlab` module.
+
+For example, to create and visualise and 8-atom silicon bulk cell::
+
+   from quippy.structures import diamond, supercell
+   from atomeye import AtomEyeViewer
+
+   d = diamond(5.43, 14)
+   viewer = AtomEyeViewer(d)
+
+A window will pop up containing the silicon unit cell, which you can manipulate
+with the mouse, by issuing commands in the the python console or
+with a variety of AtomEye `keyboard shortcuts
+<http://li.mit.edu/Archive/Graphics/A3/A3.html#keybinding>`_. To save an image in PNG format::
+
+   viewer.capture('si8.png')
+
+.. image:: si8.png
+   :align: center
+
+Then, to change the display to a :math:`2\times2\times2` supercell of
+bulk silicon, change the background colour to black, set the size and
+save an image you'd do the following::
+
+   at = supercell(d, 2, 2, 2)
+   viewer.show(at)
+
+   viewer.change_bgcolor((0, 0, 0))
+   viewer.resize(400,300)
+   viewer.capture('si2x2x2.png')
+
+.. image:: si2x2x2.png
+   :align: center
+
+Module attributes:
+
+.. attribute:: viewers
+
+   Dictionary mapping `window_id` to :class:`AtomEyeView` instances. There
+   is one entry for each currently open AtomEye view window.
+
+.. attribute:: default_state
+
+   Dictionary of key/value pairs passed to :meth:`AtomEyeView.update` when
+   a new window is created. Change this dictionary to modfiy the properties
+   of new windows. The initial value is as follows::
+
+     default_state = {
+	 'variables' : {'n->xtal_mode': 1,
+			'n->suppress_printout': 1,
+			'n->bond_mode': 1,
+			'n->atom_r_ratio': 0.5,
+			'n->small_cell_err_handler': 1,
+			'key->BackSpace': 'load_config_backward'
+			},
+	 'commands': ['xtal_origin_goto 0.5 0.5 0.5',
+		      'toggle_parallel_projection'],
+	 'cutoff_lengths': []
+     }
+"""
 
 import sys
 import numpy
@@ -94,11 +161,12 @@ default_state = {
                    'n->suppress_printout': 1,
                    'n->bond_mode': 1,
                    'n->atom_r_ratio': 0.5,
+                   'n->small_cell_err_handler': 1,
                    'key->BackSpace': 'load_config_backward'
                    },
     'commands': ['xtal_origin_goto 0.5 0.5 0.5',
                  'toggle_parallel_projection'],
-    'rcut_patches': []  #[('Si', 'Si', 2.35)]
+    'cutoff_lengths': []
 }
 
 name_map = {'positions': 'pos',
@@ -109,35 +177,98 @@ viewers = {}
 
 class AtomEyeViewer(object):
     """
-    View an atomic configuration or trajectory with AtomEye.
+    View an atomic configuration or trajectory with AtomEye
+
+    Class to represent an AtomEye viewer window. Each viewer class
+    communicates with one AtomEye thread.
+ 
+    There are wrapper methods for most of the `AtomEye 3 commands
+    <http://mt.seas.upenn.edu/Archive/Graphics/A3/A3.html#commands>`_.
+    The names of these methods match the names of the correspondning
+    commands, and the arguments follow the syntax given on the AtomEye
+    3 help page.
+    
+    Additional keyword arguments are passed along to the
+    :meth:`show` method.
+
+    Import :class:`AtomEyeView` attributes:
+
+    .. attribute:: atoms
+ 
+       :class:`Atoms` object or sequence being viewed. This will be set
+       to ``None`` if this instance was created without an ``obj``
+       parameter, which means we're viewing the ``A3`` logo.
+ 
+    .. attribute:: frame
+ 
+       Current frame, in range 1 to `len(self.atoms)`.
+ 
+    .. attribute:: delta
+ 
+       Frame increment rate when :kbd:`Delete` and :kbd:`Insert` are
+       preseed. Equivalent to AtomEye ``n->glob_advance`` setting.
+ 
+    .. attribute:: echo
+ 
+       If set to True, echo all AtomEye commands to stdout
+ 
+    .. attribute:: block
+ 
+       If set to True, wait for all AtomEye command to finish
+       executing before returning from function calls. Default is
+       False.
+ 
+    .. attribute:: fortran_indexing
+ 
+       If set to True (default) use 1-based indices for atoms.
+       Otherwise use 0-based indices.
+ 
+    .. attribute:: verbose
+ 
+       If set to True (default), print frame paramters on each
+       :meth:`redraw`, and print information about each atom when it is
+       right clicked.
+
+    Parameters
+    ----------
+
+    atoms     : :class:`quippy.atoms.Atoms` or :class:`ase.atoms.Atoms` object, or a list of objects.
+       Configuration or trajectory to view.
+    viewer_id : integer or None
+       If None, open a new viewer. Otherwise call the
+       :meth:show() method in the existing viewer with this ID.
+    copy      : integer or None
+       Viewer ID of another viewer from which to copy the viewpoint
+       and other default settings.
+    frame     : integer
+       Initial frame to show (should be in range ``0..len(atoms)-1``)
+    delta     : integer
+       Increment/decrement rate for frames when [Insert] and [Delete]
+       are pressed
+    nowindow  : bool
+       If True, open AtomEye without a visible window. Useful
+       for faster rendering of movies
+    echo      : bool
+       If True, echo all commands to the screen.
+       Useful mainly for debugging.
+    block     : bool
+       If True, wait for commands to finish executing in AtomEye
+       thread before returning (i.e. run asynchronously)
+    verbose   : bool
+       If True, print information when changing frame and
+       when an atom is clicked
+
     """
 
     CONFIG_MAX_AUXILIARY = 64
     
     def __init__(self, atoms=None, viewer_id=None, copy=None, frame=0, delta=1,
-                 nowindow=False, echo=False, block=False, verbose=True, fortran_indexing=False,
-                 **showargs):
-        """
-        Construct a new AtomEye viewer window. Each viewer class communicates with one
-        AtomEye thread.
-        
-        `atoms` - configuration or trajectory to view. Should be a :class:`quippy.Atoms`
-                  or :class:`ase.Atoms` instance, or a list of such instances.
-        `viewer_id` - if None, open a new viewer. Otherwise call the :meth:`show`() method in the existing viewer with this ID.
-        `copy` - viewer ID of another viewer from which to copy the viewpoint and other default settings
-        `frame` - initial frame to show (should be in range 0..len(atoms)-1)
-        `delta` - increment/decement rate for frames when [Insert] and [Delete] are pressed
-        `nowindow` - if True, open AtomEye without a visible window. Useful for faster rendering of movies
-        `echo` - if True, echo all commands to the screen. Good for debugging.
-        `block` - if True, wait for commands to finish executing in AtomEye thread before returning (i.e. run asynchronously)
-        `verbose` - if True, print information when changing frame and when an atom is clicked
-
-        Additional keyword arguments are passed along to the :method:`show`() method.
-        """
+                 nowindow=False, echo=False, block=False, verbose=True,
+                 fortran_indexing=False, **showargs):
         self.atoms = atoms
         self._current_atoms = None
         self._previous_atoms = None
-        self.frame = frame
+        self._frame = frame
         self.delta = delta
         self.echo = echo
         self.block = block
@@ -158,7 +289,18 @@ class AtomEyeViewer(object):
            
     def start(self, copy=None, nowindow=False):
         """
-        Start the AtomEye thread, wait for it to load and apply default commands.
+        Start the AtomEye thread, wait for it to load and apply
+        default commands.
+
+        Parameters
+        ----------
+
+        copy     : integer
+           Viewer ID of another AtomEye window from which to
+           copy settings
+        nowindow : bool
+           If True, create an AtomEye thread without a visible
+           window. Useful for rendering movies.
         """
         if self.is_alive: return
         icopy = -1
@@ -278,7 +420,7 @@ class AtomEyeViewer(object):
             self._current_atoms = self.gcat(update=True)
             if hasattr(self.atoms, '__iter__'):
                 fmt = "%%0%dd" % ceil(log10(len(self.atoms)+1))
-                title = '%s frame %s length %s' % (name, fmt % self.frame, fmt % len(self.atoms))
+                title = '%s frame %s length %s' % (name, fmt % self._frame, fmt % len(self.atoms))
             else:
                 title = name
 
@@ -295,7 +437,7 @@ class AtomEyeViewer(object):
             
             for i, p in enumerate(pbc):
                 if not p:
-                    cell[i,i] = max(1.0, 2*(pos[:,i].max()-pos[:,i].min()))
+                    cell[i,i] = max(cell[i,i], max(1.0, 2*(pos[:,i].max()-pos[:,i].min())))
 
             try:
                 arrays = self._current_atoms.properties
@@ -330,7 +472,7 @@ class AtomEyeViewer(object):
             return self._current_atoms
         else:
             if hasattr(self.atoms, '__iter__'):
-                return self.atoms[self.frame % len(self.atoms)]
+                return self.atoms[self._frame % len(self.atoms)]
             else:
                 return self.atoms
 
@@ -339,18 +481,28 @@ class AtomEyeViewer(object):
         if atoms is not None:
             self.atoms = atoms
         if frame is not None and hasattr(self.atoms, '__iter__'):
-            self.frame = frame % len(self.atoms)
+            self._frame = frame % len(self.atoms)
+        self.redraw()
 
     def show(self, atoms=None, property=None, frame=None, arrows=None):
         """
         Update what is shown in this AtomEye viewer window.
 
-        `atoms` should be a quippy.Atoms or ase.Atoms instance, or a list of instances.
-        `property` should be the name of the auxiliary property used to colour the atoms (e.g. "charge")
-        `frame` is the (zero-based) index of the frame to show.
-        `arrows` is the name of a vector property to use to draw arrows on the atoms (e.g. "force")
+        When called with no arguments, :meth:`show` is equivalent to
+        :meth:`redraw`.
 
-        When called with no arguments, show() is equivalent to redraw()
+        Parameters
+        ----------
+
+        atoms    : class:`quippy.atoms.Atoms or `ase.atoms.Atoms`
+                   instance, or a list of instances
+        property : name of the quippy :``~quippy.atoms.properties``
+                   entry or ASE :attr:`ase.atoms.arrays` entry used to
+                   colour the atoms (e.g. ``"charge"``)
+        frame    : Zero-based index of the frame to show
+                   (applies only when `atoms` is a list of Atoms objects)
+        arrows   : is the name of a vector property to use to draw arrows
+                   on the atoms (e.g. ``"force"``)
         """
         
         if not self.is_alive:
@@ -364,13 +516,27 @@ class AtomEyeViewer(object):
                 
     def redraw(self):
         """
-        Redraw this AtomEye window, keeping Atoms and settings the same
+        Redraw this AtomEye window, keeping Atoms and settings the same.
         """
         self._atomeye.redraw(self._window_id)
 
     def run_command(self, command):
         """
-        Run a command in this AtomEye thread. The command is queued for later execution.
+        Run a command in this AtomEye thread.
+
+        The command is queued for later execution, unless :attr:`block` is True.
+
+        This functionality is also available by calling an instance
+        directly, i.e. the following commands are equivalent::
+      
+	   viewer.run_command('toggle_coordination_coloring')
+           viewer('toggle_coordination_coloring')
+
+        Parameters
+        ----------
+
+        command : string
+           The command to pass to AtomEye
         """
         if not self.is_alive: 
             raise RuntimeError('is_alive is False')
@@ -421,7 +587,11 @@ class AtomEyeViewer(object):
 
     def update(self, state):
         """
-        Update settings from the dictionary D.
+        Update settings from the dictionary `state`.
+
+        Runs the AtomEye command ``set key value`` for each pair. Valid settings
+        are listed on the `AtomEye 3 settings help page
+        <http://mt.seas.upenn.edu/Archive/Graphics/A3/A3.html#redraw>`_
         """
         for k, v in state.iteritems():
             self.setp(k, v)
@@ -433,9 +603,9 @@ class AtomEyeViewer(object):
             elif key == 'commands':
                 for command in value:
                     self.run_command(command)
-            elif key == 'rcut_patches':
+            elif key == 'cutoff_lengths':
                 for (sym1, sym2, cutoff) in value:
-                    self.rcut_patch(sym1, sym2, float(rcut), absolute=True)
+                    self.rcut_patch(sym1, sym2, float(cutoff), absolute=True)
             else:
                 setattr(self, key, value)
             self.wait()
@@ -481,13 +651,20 @@ class AtomEyeViewer(object):
 
     def load_script(self, filename):
         """
-        Load AtomEye viewer settings from a file - run_script() is more robust as it's blocking.
+        Load AtomEye viewer settings from a file using the AtomEye ``load_script`` command
+
+        :meth:`run_script` is more robust as the script is run line by
+        line in a blocking sense.
         """
         self.run_command("load_script %s" % str(filename))
 
     def key(self, key):
         """
         Simulate pressing `key` on the keyboard.
+
+        The syntax for keystrokes is described on the `AtomEye 3
+        commands help page
+        <http://mt.seas.upenn.edu/Archive/Graphics/A3/A3.html#commands>`_
         """
         self.run_command("key %s" % key)
 
@@ -531,7 +708,8 @@ class AtomEyeViewer(object):
         """
         Change the viewer background colour to `color`, which should be a RGB tuple with three floats in range 0..1.
         """
-        self.run_command("change_bgcolor %f %f %f" % (color[0], color[1], color[2]))
+        r, g, b = color
+        self.run_command("change_bgcolor %f %f %f" % (r, g, b))
 
     def change_atom_r_ratio(self, delta):
         """
@@ -616,10 +794,16 @@ class AtomEyeViewer(object):
 
     def rcut_patch(self, sym1, sym2, value, absolute=False):
         """
-        Change the cutoff distance for `sym1`--`sym2` bonds by `delta.
+        Change the cutoff distance for `sym1`--`sym2` bonds by `delta`.
 
-        e.g. to increase cutoff for Si-Si bonds by 0.5 A use
+        e.g. to increase cutoff for Si-Si bonds by 0.5 A use::
+
              viewer.rcut_patch('Si', 'Si', 0.5)
+
+        With `absolute` set to True, `value` is used to set the
+        absolute cutoff distance for `sym1`--`sym2` bonds, e.g.::
+
+             viewer.rcut_patch('Si', 'Si', 2.50, True)
         """
         self.run_command("rcut_patch start %s %s" % (sym1,sym2))
         cmd = "rcut_patch %s" % value
@@ -635,8 +819,10 @@ class AtomEyeViewer(object):
         """
         Create a new cutting plane with index `n`, normal `d`, and fractional displacement `s`.
         """
+        da, db, dc = d
+        sa, sb, sc = s
         self.run_command("cutting_plane %d %f %f %f %f %f %f" % \
-                                 (n, d[0], d[1], d[2], s[0], s[1], s[2]))
+                                 (n, da, db, dc, sa, sb, sc))
 
     def shift_cutting_plane_to_anchor(self, n):
         self.run_command("shift_cutting_plane_to_anchor %d" % n)
@@ -649,10 +835,13 @@ class AtomEyeViewer(object):
 
     def capture(self, filename, resolution=None):
         """
-        Save current view to `filename`. Format is determined from file extension: .png, .jpeg, or .eps.
+        Render the current view to image `filename`
+
+        Format is determined from file extension: .png, .jpeg, or .eps.
         """
         if resolution is None: resolution = ""
         format = filename[filename.rindex('.')+1:]
+        self.wait()
         self.run_command("capture %s %s %s" % (format, filename, resolution))
 
     def change_wireframe_mode(self, ):
@@ -661,21 +850,21 @@ class AtomEyeViewer(object):
     def change_cutting_plane_wireframe_mode(self):
         self.run_command("change_cutting_plane_wireframe_mode")
 
-    def frame(self, frame):
-        """
-        Set the current frame to `frame`.
-        """
-        
-        self.frame = frame % len(self.atoms)
+    def get_frame(self):
+        return self._frame
+
+    def set_frame(self, frame):
+        self._frame = _frame % len(self.atoms)
         self.redraw()
+
+    frame = property(get_frame, set_frame, doc="Get or set the current frame")
 
     def first(self):
         """
-        Show the fisrt frame (frame 0).
+        Show the first frame (frame 0).
         """
 
         self.frame = 0
-        self.redraw()
 
     def last(self):
         """
@@ -683,7 +872,6 @@ class AtomEyeViewer(object):
         """
 
         self.frame = len(self.atoms)-1
-        self.redraw()
 
     def forward(self, delta=None):
         """
@@ -691,19 +879,15 @@ class AtomEyeViewer(object):
         """
 
         delta = delta or self.delta
-        self.frame += delta
-        self.frame = self.frame % len(self.atoms)
-        self.redraw()
+        self.frame = ((self.frame + delta) % len(self.atoms))
 
     def backward(self, delta=None):
         """
         Move backward by `delta` frames (default values is self.delta).
         """
-
         delta = delta or self.delta
-        self.frame -= delta
-        self.frame = self.frame % len(self.atoms)
-        self.redraw()
+        self.frame = (self.frame - delta) % len(self.atoms)
+
 
     def load_atom_color(self, filename):
         """
@@ -725,9 +909,14 @@ class AtomEyeViewer(object):
 
     def xtal_origin_goto(self, s):
         """
-        Move the crystal origin to fractional coordinates s (e.g. [0.5, 0.5, 0.5).
+        Move the crystal origin to fractional coordinates `s`
+
+        For example, use ``s=[0.5, 0.5, 0.5]`` to shift by half the cell along
+        the :math:`\mathbf{a}`, :math:`\mathbf{b}` and :math:`\mathbf{c}`
+        lattice vectors.
         """
-        self.run_command("xtal_origin_goto %f %f %f" % (s[0], s[1], s[2]))
+        sa, sb, sc = s
+        self.run_command("xtal_origin_goto %f %f %f" % (sa, sb, sc))
 
     def find_atom(self, i):
         """
@@ -749,23 +938,38 @@ class AtomEyeViewer(object):
         """
         self.run_command("change_aux_colormap %d" % n)
 
-    def draw_arrows(self, property, scale_factor=0.0, head_height=0.1, head_width=0.05, up=(0.0,1.0,0.0)):
+    def draw_arrows(self, property, scale_factor=0.0, head_height=0.1,
+                    head_width=0.05, up=(0.0,1.0,0.0)):
         """
-        Draw arrows on each atom, based on the vector property with name `property` (e.g. "force").
+        Draw arrows on each atom, based on a vector property
 
-        Passing `property`=None turns off previous arrows. `scale_factor` can be used to change length of
-        arrows (1 unit = 1 Angstrom; default value of 0.0 means autoscale). `head_height` and  `head_width`
-        set height and with of arrow heads in Angstrom. The `up` vector controls the plane in which arrow heads
-        are drawn (default [0.,1.,0.]).
+        Parameters
+        ----------
+
+        property : string
+           Name of the array to use for arrow vectors.
+           Use ``None`` to turn off previous arrows.
+        scale_factor : float
+           Override length of arrows. 1 unit = 1 Angstrom; default
+           value of 0.0 means autoscale.
+        head_height : float
+           Specify height of arrow heads in Angstrom. 
+        head_width : float
+        up : 3-vector (tuple, list or array)
+           Specify the plane in which the arrow heads are
+           drawn. Arrows are drawn in the plane which is common
+           to their direction and this vector.
+           Default is ``[0.,1.,0.]``.
         """
         
         if property is None:
             self.run_command('draw_arrows off')
         else:
             property = self._property_hook(self.gcat(), property)
+            up1, up2, up3 = up
             self.redraw() # ensure property is available
             self.run_command('draw_arrows %s %f %f %f %f %f %f' %
-                             (str(property), scale_factor, head_height, head_width, up[0], up[1], up[2]))
+                             (str(property), scale_factor, head_height, head_width, up1, up2, up3))
 
     def wait(self):
         """Sleep until this AtomEye viewer has finished processing all queued events."""
