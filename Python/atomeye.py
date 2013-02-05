@@ -854,7 +854,7 @@ class AtomEyeViewer(object):
         return self._frame
 
     def set_frame(self, frame):
-        self._frame = _frame % len(self.atoms)
+        self._frame = frame % len(self.atoms)
         self.redraw()
 
     frame = property(get_frame, set_frame, doc="Get or set the current frame")
