@@ -4225,6 +4225,7 @@ bool cui_treatevent(int iw)
                 if (strcmp(aecp->name, "load_script") == 0) {
                     strncpy(fname, CUI_SCRIPT_DEFAULT, sizeof(fname));
                     sscanf(line + strlen(aecp->name), " %s", fname);
+		    i = -1;
                     sprintf(args, "%s %d", fname, i);
                     instr = args;
                 }
@@ -5493,6 +5494,7 @@ int atomeyelib_run_command(int iw, char *line, char **outstr) {
     if (strcmp(aecp->name, "load_script") == 0) {
       strncpy(fname, CUI_SCRIPT_DEFAULT, sizeof(fname));
       sscanf(line + strlen(aecp->name), " %s", fname);
+      i = -1;
       sprintf(args, "%s %d", fname, i);
       instr = args;
     }
