@@ -977,6 +977,7 @@ class AtomEyeViewer(object):
             raise RuntimeError('is_alive is False')
         self._atomeye.wait(self._window_id)
 
+
     def get_visible(self):
         """Return list of indices of atoms currently visible in this viewer."""
         indices = self._atomeye.get_visible()
@@ -988,4 +989,43 @@ class AtomEyeViewer(object):
             indices = [idx+1 for idx in indices]
         return indices
 
+
+    def get_size_pixels(self, state=None):
+        """
+        Return (width, height) in pixels of this viewer
+        """
+        if state is None:
+            state = self.get_state()
+        for command in state['commands']:
+            if command.startswith('resize'):
+                break
+        else:
+            raise ValueError('cannot find "resize" entry in state["commands"]')
+        resize, width, height = command.split()
+        width = int(width)
+        height = int(height)
+        return (width, height)
+
+
+    def get_size_angstrom(self, state=None):
+        """
+        Return (width, height) in Angstrom of currently projected view
+
+        Assumes object lies in plane z=0
+        """
+        if state is None:
+            state = self.get_state()
+        W, H = self.get_size_pixels(state)
+
+        # camera position
+        cx, cy, cz = array([float(f) for f in state['variables']['AX_3D->x'].split()])
+
+        # conversion factor from view angle to pixels
+        k = float(state['variables']['AX_3D->k'])
+
+        w = abs(W*cz/k)
+        h = abs(H*cz/k)
+        
+        return (w, h)
+        
 
