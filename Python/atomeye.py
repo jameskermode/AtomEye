@@ -1018,7 +1018,7 @@ class AtomEyeViewer(object):
         W, H = self.get_size_pixels(state)
 
         # camera position
-        cx, cy, cz = array([float(f) for f in state['variables']['AX_3D->x'].split()])
+        cx, cy, cz = np.array([float(f) for f in state['variables']['AX_3D->x'].split()])
 
         # conversion factor from view angle to pixels
         k = float(state['variables']['AX_3D->k'])
