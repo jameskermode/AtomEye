@@ -1869,7 +1869,13 @@ bool proc_change_normal_color(int iw, char *instr, char **outstr)
         *outstr = cui_show_syntax;
         return FALSE;
     }
-    if (question[0]) z = search_atom_by_symbol(question);
+    if (strlen(question) != 0) {
+      /* Ensure single-character elements start with a space */
+      if (strlen(question) == 1) {
+	question[1] = question[0]; question[0] = ' '; question[2] = '\0';
+      }
+      z = search_atom_by_symbol(question);
+    }
     instr = buf;
 
     *outstr = NULL;
