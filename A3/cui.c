@@ -651,10 +651,10 @@ static void cmdfclose(int k)
 
         if (cmdf[i].fd == STDIN_FILENO)
             quit = 1;
-
-        if (cmdf[i].fd == frontend)
+        if (cmdf[i].fd == frontend) {
+            putchar('\n');
             rl_callback_handler_remove();
-        else if (cmdf[i].writable) {
+        } else if (cmdf[i].writable) {
             cui_send(CUI_PROTOCOL_QUIT, cmdf[i].fp);
         }
 
@@ -1051,6 +1051,7 @@ static bool proc_close(int iw, char *instr, char **outstr)
 #endif
     if (iw == cui_iw)
         proc_next(iw, NULL, outstr);
+
     if (cui_iw < 0)
         cmdfclose(-1);
     AX_closewindow(iw);
@@ -1063,6 +1064,7 @@ static bool proc_close(int iw, char *instr, char **outstr)
       //      pthread_mutex_unlock(&global_lock);      
 #endif
       pthread_exit ((void *)NULL);
+
     exit(-1);
 }
 
@@ -4303,6 +4305,8 @@ bool gui_treatevent(int iw)
     AXSize newsize;
     static int WindowUnMapped[AX_MAXWIN] = {0};
     pointer_in_window = AXQueryPointer(iw);
+    Atom wmDeleteMessage = XInternAtom( AX_display[iw], "WM_DELETE_WINDOW", False);
+    XSetWMProtocols( AX_display[iw], AX_win[iw], &wmDeleteMessage, 1);
     switch (AX_event[iw].type)
     {
         case UnmapNotify:
@@ -4532,7 +4536,18 @@ bool gui_treatevent(int iw)
                 return (TRUE);
             }
             return (TRUE);
-        default: return (FALSE);
+
+        case ClientMessage:
+           if (AX_event[iw].xclient.data.l[0] == wmDeleteMessage) {
+              char *outstr = NULL;
+              bool result = proc_close(iw, "close", &outstr);
+              if (IS_MANAGER && outstr && *outstr && frontend >= 0)
+                    cui_send_result(outstr, stdin);
+              return result;
+           }
+
+        default:
+           return (FALSE);
     }
 } /* end treatevent() */
 

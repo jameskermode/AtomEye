@@ -10,7 +10,6 @@
 
 #include "AX.h"
 
-
 /********************/
 /* Global variables */
 /********************/
@@ -592,12 +591,12 @@ void AX_closewindow (int iw)
         if (AX_Module_Is_PluggedIn [iw] [jw])
             AX_modules[jw].plugout(iw);
     /* close the window */
-    AXDestroyWindow(iw);
     AXSYNC(iw);
     for (jw = 0; jw < AX_MAXWIN; jw++)
         if ( (jw != iw) && (AX_cid[jw] == AX_cid[iw]) )
             break;
     /* if no officemate, also pull the phone line */
+    AXDestroyWindow(iw);
     if (jw == AX_MAXWIN)
     {
         XFreeColormap (AX_display[iw], AX_colormap[iw]);

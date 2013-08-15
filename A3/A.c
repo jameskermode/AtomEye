@@ -769,6 +769,8 @@ bool treatevent (int iw)
                 return (TRUE);
             }
             return (TRUE);
+//         case ClientMessage:
+//            if(e.xclient.data.l[0] == wmDeleteMessage) 
         default: return (FALSE);
     }
 } /* end treatevent() */

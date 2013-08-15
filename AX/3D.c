@@ -3224,7 +3224,7 @@ void AX_3D_Cylinders_ZBprint (int iw, AX_3D_Cylinders *C)
 
         for (i=0; i<C->n_power; i++)
         {
-            img = C->cylinder[i]->img;
+	    img = C->cylinder[i]->img; /* FIXME: memory error here */
             for (m=img[0].offset+1;
                  m<img[0].offset+img[img[0].offset].offset; m++)
                 if (img[m].z <= AX_zmap[iw][img[m].offset])

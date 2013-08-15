@@ -1140,6 +1140,7 @@ void pe (char *format, ...)
     if (errno==0) vfprintf(stderr,format,ap);
     else perror(vstrf(format,ap));
     va_end(ap);
+    rl_callback_handler_remove();
     exit(1);
     return;
 #else
