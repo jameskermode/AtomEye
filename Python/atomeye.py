@@ -86,7 +86,6 @@ Module attributes:
 """
 
 import sys
-import numpy
 import time
 import imp
 import os
@@ -96,8 +95,29 @@ import sys
 import tempfile
 import atexit
 from math import ceil, log10
+import numpy as np
 
 __all__ = ['AtomEyeViewer']
+
+try:
+    # try to use same fortran_indexing setting as quippy, if it's installed
+    from quippy import get_fortran_indexing, set_fortran_indexing
+    
+except ImportError:
+    # quippy is not available, so we define our own fortran_indexing setting
+
+    _fortran_indexing = False
+    
+    def get_fortran_indexing():
+        global _fortran_indexing
+        return _fortran_indexing
+
+    def set_fortran_indexing(fortran_indexing):
+        global _fortran_indexing
+        _fortran_indexing = fortran_indexing
+
+    __all__.extend(['get_fortran_indexing', 'set_fortran_indexing'])
+                             
 
 def _tmp_pkg(dir=None):
     """
@@ -160,12 +180,13 @@ default_state = {
     'variables' : {'n->xtal_mode': 1,
                    'n->suppress_printout': 1,
                    'n->bond_mode': 1,
-                   'n->atom_r_ratio': 0.5,
                    'n->small_cell_err_handler': 1,
                    'key->BackSpace': 'load_config_backward'
                    },
     'commands': ['xtal_origin_goto 0.5 0.5 0.5',
-                 'toggle_parallel_projection'],
+                 'toggle_parallel_projection',
+                 'resize 800 600',
+                 'change_atom_r_ratio -2.0'],
     'cutoff_lengths': []
 }
 
@@ -218,11 +239,6 @@ class AtomEyeViewer(object):
        executing before returning from function calls. Default is
        False.
  
-    .. attribute:: fortran_indexing
- 
-       If set to True (default) use 1-based indices for atoms.
-       Otherwise use 0-based indices.
- 
     .. attribute:: verbose
  
        If set to True (default), print frame paramters on each
@@ -263,8 +279,8 @@ class AtomEyeViewer(object):
     CONFIG_MAX_AUXILIARY = 64
     
     def __init__(self, atoms=None, viewer_id=None, copy=None, frame=0, delta=1,
-                 nowindow=False, echo=False, block=False, verbose=True,
-                 fortran_indexing=False, **showargs):
+                 nowindow=False, echo=True, block=False, verbose=True,
+                 **showargs):
         self.atoms = atoms
         self._current_atoms = None
         self._previous_atoms = None
@@ -272,7 +288,6 @@ class AtomEyeViewer(object):
         self.delta = delta
         self.echo = echo
         self.block = block
-        self.fortran_indexing = fortran_indexing
         self.verbose = verbose
         self.is_alive = False
 
@@ -363,7 +378,7 @@ class AtomEyeViewer(object):
             return
         if idx >= len(at):
             idx = idx % len(at)
-        if self.fortran_indexing:
+        if get_fortran_indexing():
             idx = idx + 1 # atomeye uses zero based indices
         self._click_hook(at, idx)
 
@@ -426,10 +441,6 @@ class AtomEyeViewer(object):
 
             self._enter_hook(self._current_atoms)
             n_atom = len(self._current_atoms)
-            try:
-                self.fortran_indexing = self._current_atoms.fortran_indexing
-            except AttributeError:
-                self.fortran_indexing = False
 
             cell = self._current_atoms.get_cell()
             pbc = self._current_atoms.get_pbc()
@@ -453,7 +464,7 @@ class AtomEyeViewer(object):
             print title
             print '-'*len(title)
             print 'Number of atoms: %d' % n_atom
-            print 'Fortran indexing: %r' % self.fortran_indexing
+            print 'Fortran indexing: %r' % get_fortran_indexing()
             print 'Unit cell:'
             print cell
             self._redraw_hook(self._current_atoms)
@@ -922,7 +933,7 @@ class AtomEyeViewer(object):
         """
         Set the anchor to the atom with index `i`.
         """
-        if self.fortran_indexing: i = i-1
+        if get_fortran_indexing(): i = i-1
         self.run_command("find_atom %d" % i)
 
     def resize(self, width, height):
@@ -982,10 +993,10 @@ class AtomEyeViewer(object):
         """Return list of indices of atoms currently visible in this viewer."""
         indices = self._atomeye.get_visible()
         at = self.gcat()
-        if numpy.any(indices > len(at)):
+        if np.any(indices > len(at)):
             # atoms duplicated due to narrow cell (n->small_cell_err_handler == 1)
             indices = list(set([idx % len(at) for idx in indices ]))
-        if self.fortran_indexing:
+        if get_fortran_indexing():
             indices = [idx+1 for idx in indices]
         return indices
 

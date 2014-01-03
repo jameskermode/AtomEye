@@ -920,9 +920,9 @@ void thread_start (void *icopy)
             }
 #ifdef USE_CUI
           }
-	  if (cui_enabled && !nontrivial_event) 
+	  if (cui_enabled && !nontrivial_event)
 #ifdef ATOMEYE_LIB
-	    nontrivial_event = atomeyelib_treatevent(iw) || cui_treatevent(iw) && cui_diligence;
+	    nontrivial_event = atomeyelib_treatevent(iw) && cui_diligence;
 #else
   	    nontrivial_event = cui_treatevent(iw) && cui_diligence;
 #endif
