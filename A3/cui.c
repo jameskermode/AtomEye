@@ -2971,8 +2971,8 @@ static bool proc_load_config_advance(int iw, char *instr, char **outstr)
       strcat(buf, ":");
       strcat(buf, instr);
       if(strcmp(instr,"forward") == 0 || strcmp(instr,"backward") == 0)
-	sprintf(buf, "%s:%d", buf, n[iw].glob_advance);
-      return proc_load_config(iw, buf, outstr);
+        sprintf(&buf[strlen(buf)], ":%d", n[iw].glob_advance);
+        return proc_load_config(iw, buf, outstr);
     } else {
       if (instr) {
         int how_much;
