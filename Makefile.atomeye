@@ -9,9 +9,6 @@ ifeq (${HAVE_QUIP},1)
   CFLAGS += -fPIC -DHAVE_LIBATOMS
   FC = ${F77}
   LD = ${LINKER}
-else
-  SVN_VERSION := -D'SVN_VERSION="$(shell svnversion -n ..)"'
-  CFLAGS += ${SVN_VERSION}
 endif
 
 export CFLAGS
@@ -19,7 +16,11 @@ export CC
 export FC
 export LD
 
-ATOMEYE_LIBS = ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -L${QUIP_ROOT}/build.${QUIP_ARCH} -lm -lXpm -lXext -lX11 -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl -L/usr/local/lib/ ${SYSLIBS}
+ifeq (${HAVE_QUIP},1)
+     ATOMEYE_LIBS = ${QUIP_ROOT}/build.${QUIP_ARCH}/libatoms.a -L${QUIP_ROOT}/build.${QUIP_ARCH} -lm -lXpm -lXext -lX11 -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl -L/usr/local/lib/ ${SYSLIBS}
+else
+     ATOMEYE_LIBS = -lm -lXpm -lXext -lX11 -lpng -lz -ljpeg -lhistory -lncurses -lreadline -lcurl -L/usr/local/lib/ ${SYSLIBS}
+endif
 
 export ATOMEYE_LIBS
 
