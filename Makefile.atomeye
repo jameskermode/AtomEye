@@ -61,3 +61,6 @@ AtomEye.app: all
 install: all
 	cp bin/A ${HOME}/bin
 	[[ -d AtomEye.app ]] && cp -r AtomEye.app /Applications
+
+static-macosx:
+	$(LD) A3/A.o A3/primitives.o A3/viewport.o A3/utils.o A3/xtal_shift.o A3/info.o A3/rcut_patch.o A3/scratch.o A3/geo.o A3/LeastSquareStrain.o A3/cui.o A3/cui_AX.o  -o bin/A -static-libgcc -static-libgfortran -lgfortran -lgomp -Llib -lAX -lAtoms -lVecMat3 -lVecMat -lIO -lScalar -lTimer  $(QUIP_ROOT)/build.$(QUIP_ARCH)/libatoms.a -lm -L/usr/local/lib/ -L/opt/local/lib -framework Accelerate -L$(QUIP_ROOT)/FoX-4.0.3/objs.$(QUIP_ARCH)/lib -lFoX_sax -lFoX_wxml -lFoX_utils -lFoX_common -lFoX_fsys -framework Accelerate /opt/local/lib/libXpm.a /opt/local/lib/libXext.a -lX11 /opt/local/lib/libpng.a /opt/local/lib/libz.a /opt/local/lib/libjpeg.a /opt/local/lib/libhistory.a /opt/local/lib/libncurses.a /opt/local/lib/libreadline.a -lcurl /opt/local/lib/libnetcdf.a /opt/local/lib/libhdf5.a /opt/local/lib/libhdf5_hl.a
