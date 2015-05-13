@@ -7,6 +7,7 @@
 /**************************************/
 
 #include "Timer.h"
+#include <IO.h>
 
 /**********************/
 /* Gregorian Calendar */
@@ -24,7 +25,7 @@ double datenummx (GregorianDate *G)
     if ((G->month < 1) || (G->month > 12))
         printf ("datenummx: month = %d\n", G->month);
     result = 365.*G->year + ceil(G->year/4.) -
-        ceil(G->year/100.) + ceil(G->year/400.) + 
+        ceil(G->year/100.) + ceil(G->year/400.) +
         cdm[G->month-1] + G->day;
     if (G->month > 2)
     {
@@ -90,11 +91,11 @@ static double cdml[] = {0,31,60,91,121,152,182,213,244,274,305,335,366};
 
 /* Calculate date components from serial date number */
 void datevecmx (double datenum, GregorianDate *G)
-{ 
-    double *cdm; 
+{
+    double *cdm;
     double ts, y;
     int iy, leap, mon;
-    
+
     datenum = 86400*datenum;
     if (1)
     {

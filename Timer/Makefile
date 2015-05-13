@@ -30,7 +30,7 @@ MY_BAK_DIR = ../bak
 USE_MY_LIB = \
    -lAX -lAtoms -lVecMat3 -lVecMat -lIO -lScalar -lTimer
 
-CFLAGS = -D_$(SYS) ${CCFLAGS} -I${MY_INC_DIR}
+CFLAGS = -D_$(SYS) ${CCFLAGS} -I${MY_INC_DIR} -I../IO
 LDFLAGS = ${SYSTEM_LIB_FLAG} ${USE_SYSTEM_LIB} -L${MY_LIB_DIR} ${USE_MY_LIB}
 
 .PHONY: all  i install  c clean  b backup  r  g  h  a access

@@ -32,7 +32,6 @@ ALLSUBDIRS = ${SUBDIRS} A3
 
 subdirs:
 	for dir in ${SUBDIRS}; do \
-	  cp $$dir/*.h include; \
 	  $(MAKE) -C $$dir || exit 1; \
 	done
 	$(MAKE) -C A3 i || exit 1
