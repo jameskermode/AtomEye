@@ -2,8 +2,8 @@ Name:           atomeye
 Version:        3
 Release:        0
 Url:            https://github.com/dmt4/atomeye
-Summary:        AtomEye 3 atomistic configuration viewer
-License:        Custom
+Summary:        The A3 atomistic configuration viewer
+License:        SUSE-Freeware
 Group:          Productivity/Scientific/Chemistry
 Source:         %{name}-%{version}.tar.xz
 BuildRoot:      %{_tmppath}/%{name}-%{version}-build
@@ -22,7 +22,7 @@ BuildRequires:  fdupes
 
 
 %description
-The famous AtomEye viewer for atomistic simulations, large or small
+The famous viewer for atomistic simulations, large or small
 
 This is a fork of James Kermode's fork of Ji Li's http://li.mit.edu/Archive/Graphics/A3/A3.html .
 
