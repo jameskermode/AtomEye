@@ -96,9 +96,9 @@ bool print_atom (int iw, int i)
             k+=8;
         }
         else printf ("(%2d) %-15s = %g%s%s.\n",
-		     //(k>=16)?"CapsLock On + ":"", 
-                     //auxiliary_keycode[k%16], 
-		     k, 
+		     //(k>=16)?"CapsLock On + ":"",
+                     //auxiliary_keycode[k%16],
+		     k,
                      CONFIG_auxiliary_name[k],
                      CONFIG_auxiliary[k][i],
                      (CONFIG_auxiliary_unit[k][0]!=EOS)?" ":"",
@@ -242,8 +242,8 @@ bool print_status (int iw)
                    CONFIG_auxiliary_name[i], CONFIG_auxiliary_unit[i],
                    n[iw].auxiliary_threshold[i][0],
                    n[iw].auxiliary_threshold[i][1]);
-        else printf("auxiliary = %s, threshold = [%g, %g],\n", 
-                    geolist[i-CONFIG_MAX_AUXILIARY].token, 
+        else printf("auxiliary = %s, threshold = [%g, %g],\n",
+                    geolist[i-CONFIG_MAX_AUXILIARY].token,
                     n[iw].auxiliary_threshold[i][0],
                     n[iw].auxiliary_threshold[i][1]);
         CalculateSimpleStatistics
@@ -376,10 +376,10 @@ bool print_help (int iw)
         printf("Ctrl+A: toggle invisibility outside auxiliary thresholds;\n");
         printf("Ctrl+T: toggle floating auxiliary thresholds mode;\n");
         printf("Ctrl+R: reset auxiliary thresholds;\n");
-        if (n[iw].auxiliary_idx == CONFIG_MAX_AUXILIARY + GEO_SHEAR_STRAIN) 
+        if (n[iw].auxiliary_idx == CONFIG_MAX_AUXILIARY + GEO_SHEAR_STRAIN)
             printf("Shift+G: toggle subtract mean from Mises "
                    "strain evaluation;\n");
-        if (n[iw].auxiliary_idx == CONFIG_MAX_AUXILIARY + GEO_CENTRAL_SYMM) 
+        if (n[iw].auxiliary_idx == CONFIG_MAX_AUXILIARY + GEO_CENTRAL_SYMM)
             printf("Shift+H: change central symmetry neighbormax;\n");
     }
     printf("***********************************************************\n");
@@ -452,7 +452,7 @@ void print_atom_quartet_info (int iw, int l, int k, int j, int i)
 } /* end print_atom_quartet_info() */
 
 
-static int *tag_atoms_in_monoclinic_filter
+static int tag_atoms_in_monoclinic_filter
 (V3 origin, M3 HH, double height, double xytolerance,
  int *selected, char *taglist)
 {
@@ -512,7 +512,7 @@ void save_atoms_in_monoclinic_filter (int iw)
     char danswer[MAX_FILENAME_SIZE], *answer, fname[MAX_FILENAME_SIZE];
     char *taglist = NULL;
     int selected[2];
-    
+
     V3SUB( B->BALL[n[iw].atom_stack[0]].x,
            B->BALL[n[iw].atom_stack[1]].x, HH[0] );
     V3SUB( B->BALL[n[iw].atom_stack[2]].x,
@@ -527,9 +527,9 @@ void save_atoms_in_monoclinic_filter (int iw)
     V3NORMALIZE (HH[2], d0);
     printf ("\"up\" is [%g %g %g]\n"
             "check it agrees with your mirror normal...\n", V3E(HH[2]));
-        
+
     d0 = 2.5;
-    zmargin = 0.01; 
+    zmargin = 0.01;
     xytolerance = 0.01;
     xterm_get_focus(iw); clear_stdin_buffer();
     REALLOC (save_atoms_in_monoclinic_filter, taglist, np, char);
