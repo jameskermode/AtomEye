@@ -9,6 +9,7 @@
 #ifndef _Timer_h
 #define _Timer_h
 
+#include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -57,7 +58,7 @@ extern struct rusage chronometer_start, chronometer_stop;
 			     chronometer_start.ru_utime.tv_sec)
 
 /* taskwatch.c */
-    
+
 /******************************************************************/
 /* Real time watches of multiple (< TASKWATCH_MAX_RECORDS) tasks, */
 /* each id. by a token[] string (< TASKWATCH_MAX_TOKENSIZE bytes) */

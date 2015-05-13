@@ -266,20 +266,22 @@ typedef char TermString[TERMSIZE];
   (valtype==IOVAL_FLOAT)  ? (*FLOATP(ptr))  : \
   (valtype==IOVAL_DOUBLE) ? (*DOUBLEP(ptr)) : 0 )
 
-#define ISINT(i)     ((i)==INT(i))
-#define ISDIGIT(c)   ((((char)(c))>='0')&&(((char)(c))<='9'))
-#define ISLOWER(c)   ((((char)(c))>='a')&&(((char)(c))<='z'))
-#define ISUPPER(c)   ((((char)(c))>='A')&&(((char)(c))<='Z'))
-#define ISALPHA(c)   (ISLOWER(c)||ISUPPER(c))
-#define ISALNUM(c)   (ISDIGIT(c)||ISALPHA(c))
+// #define ISINT(i)     ((i)==INT(i))
+// #define ISDIGIT(c)   ((((char)(c))>='0')&&(((char)(c))<='9'))
+// #define ISLOWER(c)   ((((char)(c))>='a')&&(((char)(c))<='z'))
+// #define ISUPPER(c)   ((((char)(c))>='A')&&(((char)(c))<='Z'))
+// #define ISALPHA(c)   (ISLOWER(c)||ISUPPER(c))
+// #define ISALNUM(c)   (ISDIGIT(c)||ISALPHA(c))
 #define ISBLANK(c)   ((((char)(c))==' ')||(((char)(c))=='\t'))
 
-#define ISNOTINT(i)   ((i)!=INT(i))
-#define ISNOTDIGIT(c) ((((char)(c))<'0')||(((char)(c))>'9'))
-#define ISNOTLOWER(c) ((((char)(c))<'a')||(((char)(c))>'z'))
-#define ISNOTUPPER(c) ((((char)(c))<'A')||(((char)(c))>'Z'))
-#define ISNOTALPHA(c) (ISNOTLOWER(c)&&ISNOTUPPER(c))
-#define ISNOTALNUM(c) (ISNOTDIGIT(c)&&ISNOTALPHA(c))
+#define ISNOTDIGIT(c) (!ISDIGIT(c))
+
+// #define ISNOTINT(i)   ((i)!=INT(i))
+// #define ISNOTDIGIT(c) ((((char)(c))<'0')||(((char)(c))>'9'))
+// #define ISNOTLOWER(c) ((((char)(c))<'a')||(((char)(c))>'z'))
+// #define ISNOTUPPER(c) ((((char)(c))<'A')||(((char)(c))>'Z'))
+// #define ISNOTALPHA(c) (ISNOTLOWER(c)&&ISNOTUPPER(c))
+// #define ISNOTALNUM(c) (ISNOTDIGIT(c)&&ISNOTALPHA(c))
 #define ISNOTBLANK(c) ((((char)(c))!=' ')&&(((char)(c))!='\t'))
 
 #define SRTRTRT(x)    #x
@@ -763,7 +765,7 @@ sizeof(char_array)/sizeof(char))?char_array : backup_alloc(size_in_chars))
 
 
 /* scratch.c: */
-    
+
 /***********************************************************/
 /* indefinite temporary scratch space: provides fp_scratch */
 /***********************************************************/
@@ -806,7 +808,7 @@ void dump_scratched_to (FILE *fp, char *esc);
 #define DUMP_LINENO  'N'
 #define DUMP_TOKENO  'I'
 
-void fDump (FILE *fp, char *linefmt, int minline, int maxline, void *A, 
+void fDump (FILE *fp, char *linefmt, int minline, int maxline, void *A,
 	    int minchar, int maxchar);
 #define Dump(linefmt,minline,maxline,A,minchar,maxchar) \
 fDump(stdout,linefmt,minline,maxline,(void *)(A),minchar,maxchar)
@@ -853,7 +855,7 @@ void fMump (FILE *fp, int rows, int cols, double *A);
 #define mump(rank,A) fmump(stdout,rank,A)
 
 /* print.c: */
-    
+
 /********************************************************************/
 /* Line/matrix multi-object formatter using printf escape sequences */
 /* "%[0-9.l]*[a-zA-Z]" with alignment directives. Works for finite  */
@@ -995,7 +997,7 @@ CAN( if (ft!=NULL) fbreakup(ft); ft=fjoin(3,fp1,fp2,fp3); )
 #define ftie4(fp1,fp2,fp3,fp4) \
 CAN( if (ft!=NULL) fbreakup(ft); ft=fjoin(4,fp1,fp2,fp3,fp4); )
 
-    
+
 /* jterm.c: */
 
 /**************************************************************************/
