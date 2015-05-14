@@ -277,7 +277,7 @@ bool treatevent (int iw)
                                "strain calculation.\n", ref_fbasename);
                     }
                     else
-                    {    
+                    {
                         ComputeLeastSquareStrain = 0;
                         IsoAtomicReferenceFree (ref);
                         LeastSquareStrain_Free();
@@ -367,7 +367,7 @@ bool treatevent (int iw)
                 case XK_b:
                     if ( AXLOCK(iw) || AXMETA(iw) || AXSHFT(iw) )
                         return(treat_numeral_event(iw,10+keysym-XK_a));
-                    else 
+                    else
                     {
                         n[iw].bond_mode = !n[iw].bond_mode;
                         if (n[iw].bond_mode)
@@ -431,7 +431,7 @@ bool treatevent (int iw)
                             printf("Thresholds of %s = [%g, %g].\n",
                                    geolist
                                    [n[iw].auxiliary_idx-
-                                   CONFIG_MAX_AUXILIARY].token, 
+                                   CONFIG_MAX_AUXILIARY].token,
                                    n[iw].auxiliary_threshold
                                    [n[iw].auxiliary_idx][0],
                                    n[iw].auxiliary_threshold
@@ -464,7 +464,7 @@ bool treatevent (int iw)
                             printf("Thresholds of %s = [%g, %g].\n",
                                    geolist
                                    [n[iw].auxiliary_idx-
-                                   CONFIG_MAX_AUXILIARY].token, 
+                                   CONFIG_MAX_AUXILIARY].token,
                                    n[iw].auxiliary_threshold
                                    [n[iw].auxiliary_idx][0],
                                    n[iw].auxiliary_threshold
@@ -770,7 +770,7 @@ bool treatevent (int iw)
             }
             return (TRUE);
 //         case ClientMessage:
-//            if(e.xclient.data.l[0] == wmDeleteMessage) 
+//            if(e.xclient.data.l[0] == wmDeleteMessage)
         default: return (FALSE);
     }
 } /* end treatevent() */
@@ -890,7 +890,7 @@ void thread_start (void *icopy)
     }
 #ifdef ATOMEYE_LIB
     /* Initialisation complete */
-    (*atomeyelib_on_new)(atomeyelib_mod_id, iw);    
+    (*atomeyelib_on_new)(atomeyelib_mod_id, iw);
 #endif
     for (nontrivial_event = TRUE;;)
     { /* blocking is more CPU efficient */
@@ -963,6 +963,8 @@ int main (int argc, char *argv[])
 #else
     char command[512], *TTYname;
 #endif
+
+    putenv("XLIB_SKIP_ARGB_VISUALS=1");
 
 #ifdef HAVE_LIBATOMS
     int silent = -1;
@@ -1047,7 +1049,7 @@ int main (int argc, char *argv[])
         if (*blank_advance(CONFIG_auxiliary_name[k])==EOS)
             sprintf(CONFIG_auxiliary_name[k], "auxiliary%d", k);
     /* more functionalities than you may need */
-    guess_to_be_PBC = TRUE;  
+    guess_to_be_PBC = TRUE;
     M3InV (H, HI, volume);
     lengthscale = cbrt(volume);
     rebind_CT (Config_Aapp_to_Alib, "", ct, &tp); cr();
@@ -1064,12 +1066,12 @@ int main (int argc, char *argv[])
         N->s_overflow_err_handler =
             NEIGHBORLIST_S_OVERFLOW_ERR_HANDLER_BOUNDING_BOX;
 
-    /* Use default value of small_cell_err_handler */ 
+    /* Use default value of small_cell_err_handler */
     N->small_cell_err_handler = NEIGHBORLIST_DEF_SMALL_CELL_ERR_HANDLER;
 #ifdef USE_CUI
     N->small_cell_err_handler = cui_small_cell_err_handler;
 #endif
-    
+
     /* the PDB does have CRYST1 tag but still overflows, the */
     /* above still happens. Only when there is CRYST1 tag    */
     /* and all atoms are rigorously inside the orthogonal    */
