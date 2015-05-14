@@ -36,7 +36,7 @@ This is a fork of James Kermode's fork of Ji Li's http://li.mit.edu/Archive/Grap
 
 
 %install
-install -D -s -m 755 bin/A %{buildroot}%{_bindir}/A
+install -D -s -m 755 bin/A %{buildroot}%{_bindir}/atomeye
 %fdupes -s $RPM_BUILD_ROOT
 
 
