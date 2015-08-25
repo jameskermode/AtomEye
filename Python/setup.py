@@ -79,7 +79,7 @@ setup(name='atomeye',
       ext_modules = [Extension(name='_atomeye',
                                sources=['atomeyemodule.c'],
                                library_dirs=atomeye_libdirs,
-                               include_dirs=[os.path.join(atomeye_dir,'include'), os.path.join(quip_root_dir,'libAtoms')],
+                               include_dirs=[os.path.join(atomeye_dir,'include'), os.path.join(quip_root_dir,'src/libAtoms')],
                                define_macros=[('SIZEOF_FORTRAN_T', sizeof_fortran_t)],
                                extra_link_args=atomeye_extra_link_args,
                                depends=[os.path.join(atomeye_dir, 'lib/libAtomEye.a')])
