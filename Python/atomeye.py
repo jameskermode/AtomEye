@@ -1052,4 +1052,7 @@ class AtomEyeViewer(object):
         os.unlink(fname)
         
 def view(atoms, **kwargs):
+    """
+    Convenience wrapper which creates an `AtomEyeViewer` for `atoms`.
+    """
     return AtomEyeViewer(atoms, **kwargs)
