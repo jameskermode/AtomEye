@@ -184,7 +184,7 @@ default_state = {
                    'key->BackSpace': 'load_config_backward'
                    },
     'commands': ['xtal_origin_goto 0.5 0.5 0.5',
-                 'toggle_parallel_projection',
+                 #'toggle_parallel_projection',
                  'resize 800 600',
                  'change_atom_r_ratio -2.0'],
     'cutoff_lengths': []
@@ -279,7 +279,7 @@ class AtomEyeViewer(object):
     CONFIG_MAX_AUXILIARY = 64
     
     def __init__(self, atoms=None, viewer_id=None, copy=None, frame=0, delta=1,
-                 nowindow=False, echo=True, block=False, verbose=True,
+                 nowindow=False, echo=False, block=False, verbose=False,
                  **showargs):
         self.atoms = atoms
         self._current_atoms = None
@@ -1038,5 +1038,18 @@ class AtomEyeViewer(object):
         h = abs(H*cz/k)
         
         return (w, h)
-        
+     
 
+    def display(self):
+        """
+        Display snapshot from AtomEye session in IPython notebook
+        """
+        fname = tempfile.mkstemp(suffix='.png')[1]
+        self.capture(fname)
+        self.wait()
+        from IPython.display import Image, display
+        display(Image(filename=fname))
+        os.unlink(fname)
+        
+def view(atoms, **kwargs):
+    return AtomEyeViewer(atoms, **kwargs)
