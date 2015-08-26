@@ -97,7 +97,20 @@ import atexit
 from math import ceil, log10
 import numpy as np
 
-__all__ = ['AtomEyeViewer']
+__all__ = ['AtomEyeViewer', 'view', 'redraw', 'run_command', 'run_script', 'close',
+           'setp', 'save_script', 'toggle_coordination_coloring', 'translate',
+           'shift_xtal', 'rotate', 'advance', 'shift_cutting_plane', 'change_bgcolor',
+           'change_atom_r_ratio', 'change_bond_radius', 'change_view_angle_amplification',
+           'toggle_parallel_projection', 'toggle_bond_mode', 'toggle_small_cell_mode',
+           'normal_coloring', 'aux_property_coloring', 'central_symmetry_coloring',
+           'change_aux_property_threshold', 'reset_aux_property_thresholds',
+           'toggle_aux_property_thresholds_saturation', 'toggle_aux_property_thresholds_rigid',
+           'rcut_patch', 'select_gear', 'cutting_plane', 'shift_cutting_plane_to_anchor',
+           'delete_cutting_plane', 'flip_cutting_plane', 'capture', 'change_wireframe_mode',
+           'change_cutting_plane_wireframe_mode', 'get_frame', 'set_frame', 'get_delta',
+           'set_delta', 'first', 'last', 'forward', 'backward', 'load_atom_color',
+           'load_aux', 'look_at_the_anchor', 'observer_goto', 'xtal_origin_goto',
+           'find_atom', 'resize', 'change_aux_colormap', 'draw_arrows', 'wait', 'display']
 
 try:
     # try to use same fortran_indexing setting as quippy, if it's installed
@@ -1051,8 +1064,408 @@ class AtomEyeViewer(object):
         display(Image(filename=fname))
         os.unlink(fname)
         
+
+_viewer = None
+
+def gcv():
+    return _viewer
+
+def scv(viewer):
+    _viewer = viewer
+
 def view(atoms, **kwargs):
     """
-    Convenience wrapper which creates an `AtomEyeViewer` for `atoms`.
+    Convenience wrapper to create/reuse a default `AtomEyeViewer`
     """
-    return AtomEyeViewer(atoms, **kwargs)
+    global _viewer
+    if _viewer is None:
+        _viewer = AtomEyeViewer(atoms, **kwargs)
+    else:
+        _viewer.show(atoms, **kwargs)
+    return _viewer
+
+def redraw():
+    """
+    Redraw current AtomEye window, keeping Atoms and settings the same.
+    """
+    gcv().redraw()
+
+def run_command(command):
+    """
+    Run a command in current AtomEye thread.
+
+    The command is queued for later execution, unless :attr:`block` is True.
+
+    Parameters
+    ----------
+
+    command : string
+       The command to pass to AtomEye
+    """
+    gcv().run_command(command)
+
+def run_script(script):
+    """
+    Run commands from the file script, in a blocking fashion.
+    """
+    gcv().run_script(script)
+
+def close():
+    """
+    Close the current viewer window.
+    """
+    gcv().close()
+
+def setp(self, key, value):
+    """
+    Run the AtomEye command "set key value"
+    """
+    gcv().setp(key, value)
+
+def save_script(filename):
+    """
+    Save AtomEye viewer settings to a file.
+    """
+    gcv().save(filename)
+
+def toggle_coordination_coloring():
+    """
+    Turn on or off colouring by coordination number (key "k")
+    """
+    gcv().toggle_coordination_coloring()
+
+def translate(axis, delta):
+    """
+    Translate system along `axis` by an amount `delta` (key "Ctrl+left/right/up/down")
+    """
+    gcv().translate(axis, delta)
+
+def shift_xtal(axis, delta):
+    """
+    Shift crystal within periodic boundaries along `axis` by `delta` (key "Shift+left/right/up/down").
+    """
+    gcv().shift_xtal(axis, delta)
+
+def rotate(axis, theta):
+    """
+    Rotate around `axis` by angle `theta`.
+    """
+    gcv().rotate(axis, theta)
+
+def advance(delta):
+    """
+    Move the camera forward by `delta`.
+    """
+    gcv().advance(delta)
+
+def shift_cutting_plane(delta):
+    """
+    Shift the current cutting plane by an amount `delta`.
+    """
+    gcv().shift_cutting_plane(delta)
+
+def change_bgcolor(color):
+    """
+    Change the viewer background colour to `color`, which should be a RGB tuple with three floats in range 0..1.
+    """
+    gcv().change_bgcolor(color)
+
+def change_atom_r_ratio(delta):
+    """
+    Change the size of the balls used to draw the atoms by `delta`.
+    """
+    gcv().change_atom_r_ratio(delta)
+
+def change_bond_radius(delta):
+    """
+    Change the radius of the cylinders used the draw bonds by `delta`.
+    """
+    gcv().change_bond_radius(delta)
+
+def change_view_angle_amplification(delta):
+    """
+    Change the amplification of the view angle by `delta`.
+    """
+    gcv().change_view_angle_amplification(delta)
+
+def toggle_parallel_projection():
+    """
+    Toggle between parallel and perspective projections.
+    """
+    gcv().toggle_parallel_projection()
+
+def toggle_bond_mode():
+    """
+    Turn on or off bonds.
+    """
+    gcv().toggle_bond_mode()
+
+def toggle_small_cell_mode():
+    """
+    Toggle between two different behaviours for when cell is smaller than r_cut/2:
+     1. clip cell - some neigbours may be lost (default)
+     2. replicate cell along narrow directions
+    """
+    gcv().toggle_small_cell_mode()
+
+def normal_coloring():
+    """
+    Return to normal colouring of the atoms (key "o").
+    """
+    gcv().normal_coloring()
+
+def aux_property_coloring(auxprop):
+    """
+    Colour the currently viewed atoms according to `auxprop`.
+
+    Overloaded to allow 
+    See :ref:`qlab_atom_coloring` for more details and examples.
+
+    Parameters
+    ----------
+    auxprop : str, array_like, int or list
+       Values to use to colour the atoms. Should be either the
+       name of a scalar field entry in :attr:`~.Atoms.properties`
+       (or equivalently, :attr:`~Atoms.arrays`) such as ``"charge"``,
+       a float, int or bool array of shape ``(len(gcat()),)``, or an
+       atom index or list of atom indices to highlight particular atoms.
+    """
+    gcv().aux_property_coloring(auxprop)
+
+def central_symmetry_coloring():
+    """
+    Colour atoms by centro-symmetry parameter.
+    """
+    gcv().central_symmetry_coloring()
+
+def change_aux_property_threshold(lower, upper):
+    """
+    Change the lower and upper aux property thresholds.
+    """
+    gcv().change_aux_property_threshold(lower, upper)
+
+def reset_aux_property_thresholds():
+    """
+    Reset aux property thresholds to automatic values.
+    """
+    gcv().reset_aux_property_thresholds()
+
+def toggle_aux_property_thresholds_saturation():
+    """
+    Toggle between saturated colouring and invisibility for values outside aux prop thresholds.
+    """
+    gcv().toggle_aux_property_thresholds_saturation()
+
+def toggle_aux_property_thresholds_rigid():
+    """
+    Toggle between floating and rigid aux property thresholds when moving between frames
+    """
+    gcv().toggle_aux_property_thresholds_rigid()
+
+def rcut_patch(sym1, sym2, value, absolute=False):
+    """
+    Change the cutoff distance for `sym1`--`sym2` bonds by `delta`.
+
+    e.g. to increase cutoff for Si-Si bonds by 0.5 A use::
+
+         viewer.rcut_patch('Si', 'Si', 0.5)
+
+    With `absolute` set to True, `value` is used to set the
+    absolute cutoff distance for `sym1`--`sym2` bonds, e.g.::
+
+         viewer.rcut_patch('Si', 'Si', 2.50, True)
+    """
+    gcv().rcut_patch(sym1, sym2, value, absolute)
+
+def select_gear(gear):
+    """
+    Change the AtomEye gear to `gear`
+
+    Equivalent to pressing the one of the numeric keys 0..9
+    """
+    gcv().select_gear(gear)
+
+def cutting_plane(n, d, s):
+    """
+    Create a new cutting plane with index `n`, normal `d`, and fractional displacement `s`.
+    """
+    gcv().cutting_plane(n, d, s)
+
+def shift_cutting_plane_to_anchor(n):
+    """
+    Move the cutting plane with index `n` to the anchor
+    """
+    gcv().shift_cutting_plane_to_anchor(n)
+
+def delete_cutting_plane(n):
+    """
+    Delete the cutting plane with index `n`
+    """
+    gcv().delete_cutting_plane(n)
+
+def flip_cutting_plane(n):
+    """
+    Flip the cutting plane with index `n`
+    """
+    gcv().flip_cutting_plane(n)
+
+def capture(filename, resolution=None):
+    """
+    Render the current view to image `filename`
+
+    Format is determined from file extension: .png, .jpeg, or .eps.
+    """
+    gcv().capture(filename, resolution)
+
+def change_wireframe_mode():
+    """
+    Change the display mode for the unit cell box.
+
+    Equivalent to pressing the `i` key.
+    """
+    gcv().change_wireframe_mode()
+
+def change_cutting_plane_wireframe_mode():
+    """
+    Change the display mode for cutting planes
+    """
+    gcv().change_cutting_plane_wireframe_mode()
+
+def get_frame():
+    """
+    Get index of frame currently being viewed
+    """
+    return gcv().frame
+
+def set_frame(frame):
+    """
+    Set current frame index to `frame`
+    """
+    gcv().frame = frame
+
+def get_delta():
+    """
+    Get frame increment rate
+    """
+    return gcv().delta
+
+def set_delta(delta):
+    """
+    Set frame increment rate
+    """
+    gcv().delta = delta
+
+def first():
+    """
+    Show the first frame (frame 0).
+    """
+    gcv().first()
+
+def last():
+    """
+    Show the last frame, i.e. len(gcv())-1
+    """
+    gcv().last()
+
+def forward(delta=None):
+    """
+    Move forward by `delta` frames (default value is gcv().delta).
+    """
+    gcv().forward(delta)
+
+def backward(delta=None):
+    """
+    Move backward by `delta` frames (default values is gcv().delta).
+    """
+    gcv().backward(delta)
+
+def load_atom_color(filename):
+    """
+    Load atom colours from a .clr file.
+    """
+    gcv().load_atom_color(filename)
+
+def load_aux(filename):
+    """
+    Load aux property values from a .aux file.
+    """
+    gcv().load_aux(filename)
+
+def look_at_the_anchor():
+    """
+    Equivalent to pressing the `a` key
+    """
+    gcv().look_at_the_anchor()
+
+def observer_goto():
+    """
+    Prompt for fractional position and move the observer there
+
+    Equivalent to pressing the `g` key.
+    """
+    gcv().observer_goto()
+
+def xtal_origin_goto(s):
+    """
+    Move the crystal origin to fractional coordinates `s`
+
+    For example, use ``s=[0.5, 0.5, 0.5]`` to shift by half the cell along
+    the :math:`\mathbf{a}`, :math:`\mathbf{b}` and :math:`\mathbf{c}`
+    lattice vectors.
+    """
+    gcv().xtal_origin_goto(s)
+
+def find_atom(i):
+    """
+    Set the anchor to the atom with index `i`.
+    """
+    gcv().find_atom(i)
+
+def resize(width, height):
+    """
+    Resize the current window to `width` x `height` pixels.
+    """
+    gcv().resize(width, height)
+
+def change_aux_colormap(n):
+    """
+    Select the `n`\ -th auxiliary property colourmap. 
+    """
+    gcv().change_aux_colormap(n)
+
+def draw_arrows(property, scale_factor=0.0, head_height=0.1,
+                head_width=0.05, up=(0.0,1.0,0.0)):
+    """
+    Draw arrows on each atom, based on a vector property
+
+    Parameters
+    ----------
+    property : string
+       Name of the array to use for arrow vectors.
+       Use ``None`` to turn off previous arrows.
+    scale_factor : float
+       Override length of arrows. 1 unit = 1 Angstrom; default
+       value of 0.0 means autoscale.
+    head_height : float
+       Specify height of arrow heads in Angstrom. 
+    head_width : float
+    up : 3-vector (tuple, list or array)
+       Specify the plane in which the arrow heads are
+       drawn. Arrows are drawn in the plane which is common
+       to their direction and this vector.
+       Default is ``[0.,1.,0.]``.
+    """
+    gcv().draw_arrows(property, scale_factor, head_height,
+                      head_width, up)
+
+def wait():
+    """Sleep until current AtomEye viewer has finished processing all queued events."""
+    gcv().wait()
+
+def display():
+    """
+    Display snapshot from current viewer in Jupyter notebook
+    """
+    gcv().display()
+
+
