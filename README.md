@@ -28,7 +28,11 @@ are available from
 ## Python extension module
 
 See the `Python/` subdirectory for a Python extension module which
-links to the `atomeyelib` library. Build and install with `python setup.py install` from inside this subdirectory.
+links to the `atomeyelib` library. 
+
+First do a `make clean` then a `make atomeyelib` from the top-level directory, then  
+build and install the Python extension module with 
+`python setup.py install` from inside the `Python/` subdirectory.
 
 The module exports a viewer class, `atomeye.AtomEyeViewer` and a convenience 
 function `atomeye.view()`. Both can be used to visualise with 
