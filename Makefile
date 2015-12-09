@@ -6,9 +6,9 @@ endif
 ifneq (${QUIP_ARCH},)
   HAVE_QUIP = 1
   export HAVE_QUIP
-  FOX = FoX-4.0.3
-  export FOX_LIBDIR=${QUIP_ROOT}/src/FoX-4.0.3/objs.${QUIP_ARCH}/lib
-  export FOX_INCDIR=${QUIP_ROOT}/src/FoX-4.0.3/objs.${QUIP_ARCH}/finclude
+  FOX = fox
+  export FOX_LIBDIR=${QUIP_ROOT}/src/${FOX}/objs.${QUIP_ARCH}/lib
+  export FOX_INCDIR=${QUIP_ROOT}/src/${FOX}/objs.${QUIP_ARCH}/finclude
 endif
 
 all:
