@@ -1057,7 +1057,8 @@ class AtomEyeViewer(object):
         """
         Display snapshot from AtomEye session in IPython notebook
         """
-        fname = tempfile.mkstemp(suffix='.png')[1]
+        fd,fname = tempfile.mkstemp(suffix='.png')
+        os.close(fd)
         self.capture(fname)
         self.wait()
         from IPython.display import Image, display
