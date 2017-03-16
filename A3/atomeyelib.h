@@ -6,7 +6,9 @@
 #define ATOMEYELIB_REDRAW 1
 #define ATOMEYELIB_RUN_COMMAND 2
 
+#if HAVE_LIBATOMS
 #include "libatoms.h"
+#endif
 
 typedef struct {
   fortran_t params[SIZEOF_FORTRAN_T];
